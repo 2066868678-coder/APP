@@ -1,0 +1,25 @@
+# 单词突围 - 依赖库清单
+# 安装方法：在E:\APP目录下打开终端，运行以下命令：
+# pip install -r requirements.txt
+
+# ===== OCR识别 =====
+paddlepaddle>=3.0.0          # 百度深度学习框架（CPU版）
+paddleocr>=2.9.0             # OCR文字识别核心库
+pymupdf>=1.24.0              # PDF文件处理
+
+# ===== 后端API =====
+fastapi>=0.115.0             # Web API框架
+uvicorn>=0.30.0              # ASGI服务器
+sqlalchemy>=2.0.0            # 数据库ORM
+aiosqlite>=0.20.0            # 异步SQLite
+python-multipart>=0.0.9      # 文件上传支持
+
+# ===== 数据处理 =====
+pandas>=2.2.0                # 数据处理
+openpyxl>=3.1.0              # Excel文件支持
+
+# ===== 手机App =====
+flet>=0.26.0                 # 移动端UI框架
+
+# ===== 云同步 =====
+httpx>=0.28.0                # HTTP客户端（用于LeanCloud API）
