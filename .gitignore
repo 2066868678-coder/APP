@@ -12,13 +12,12 @@ build/
 .idea/
 .vscode/
 
-# Database
-database/words.db
-database/words_old.db
-database/words_new.db
+# Database (regenerated from PDF)
+database/*.db
 
 # OCR output
-ocr/output/
+ocr/output/*
+!ocr/output/.gitkeep
 
 # OS
 .DS_Store
@@ -26,3 +25,6 @@ Thumbs.db
 
 # Memory files (personal)
 .claude/
+
+# Run temp
+*.output
