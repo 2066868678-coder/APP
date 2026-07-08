@@ -10,9 +10,10 @@
 4. 自评"忘记" → 保留在今日复习中，稍后重排出现
 """
 
-import sys, os
+import sys, os, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+import threading
 import flet as ft
 from app.services import api_service
 
@@ -45,9 +46,6 @@ class ReviewPage:
             padding=ft.Padding(left=16, top=16, right=16, bottom=16),
         )
 
-        self.card_container.content = self._build_loading()
-
-        # 记得/忘记按钮
         self.action_buttons = ft.Container(
             content=ft.Row([
                 ft.ElevatedButton("忘记", icon=ft.Icons.CLOSE, color=ft.Colors.RED,
@@ -71,24 +69,30 @@ class ReviewPage:
             padding=ft.Padding(left=8, top=8, right=8, bottom=8),
         )
 
-        self._load_data()
+        # 直接加载数据（本地数据库，很快）
+        try:
+            today = api_service.get_today_words()
+            words = []
+            if today and today.get('review_words'):
+                words = today['review_words']
+        except Exception:
+            words = []
+
+        if not words:
+            self.card_container.content = self._build_empty()
+            self.progress_text.value = "今日复习: 0/0"
+        else:
+            self.words = words
+            self.review_total = len(words)
+            self.word_index = 0
+            self.remaining_queue = []
+            self._show_current_word(initial=True)
+
         return ft.Column([
             header,
             ft.Container(content=self.card_container, expand=True),
             self.action_buttons, hint,
         ], spacing=0, tight=True)
-
-    def _build_loading(self):
-        return ft.Container(
-            content=ft.Column([
-                ft.Container(expand=True),
-                ft.ProgressRing(color=ft.Colors.BLUE),
-                ft.Container(height=16),
-                ft.Text("加载复习计划...", size=16, color=ft.Colors.GREY),
-                ft.Container(expand=True),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            expand=True,
-        )
 
     def _build_empty(self, msg=None):
         msg = msg or "暂无需要复习的单词\n学完新词后系统会根据艾宾浩斯遗忘曲线自动安排复习"
@@ -107,36 +111,36 @@ class ReviewPage:
         )
 
     def _load_data(self):
-            try:
-                today = api_service.get_today_words()
-                words = []
-                if today and today.get('review_words'):
-                    words = today['review_words']
-            except Exception:
-                words = []
-            self._data_loaded(words)
-        
+        try:
+            today = api_service.get_today_words()
+            words = []
+            if today and today.get('review_words'):
+                words = today['review_words']
+        except Exception:
+            words = []
+        self._data_loaded(words)
 
     def _data_loaded(self, words):
         if not words:
             self.card_container.content = self._build_empty()
             self.progress_text.value = "今日复习: 0/0"
             self.action_buttons.visible = False
-            self.page.update()
             return
         self.words = words
         self.review_total = len(words)
         self.review_done = 0
         self.word_index = 0
         self.remaining_queue = []
-        self._show_current_word()
+        self._show_current_word(initial=True)
+        self.page.update()
 
-    def _show_current_word(self):
+    def _show_current_word(self, initial=False):
         wd = self._get_word()
         if not wd:
             self.card_container.content = self._build_empty("🎉 今日复习已完成！")
             self.action_buttons.visible = False
-            self.page.update()
+            if not initial:
+                self.page.update()
             return
         self.flipped = False
         front = ft.Container(
@@ -162,8 +166,9 @@ class ReviewPage:
         )
         self.action_buttons.visible = False
         self.card_container.content = ft.Column([card], spacing=0, tight=True)
-        self._update_progress()
-        self.page.update()
+        self._update_progress(initial=initial)
+        if not initial:
+            self.page.update()
 
     def _flip_card(self, e):
         if self.flipped:
@@ -260,9 +265,10 @@ class ReviewPage:
             return None
         return self.words[self.word_index]
 
-    def _update_progress(self):
+    def _update_progress(self, initial=False):
         self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total}  |  当前 {min(self.word_index+1, self.review_total)}/{self.review_total}"
-        self.progress_text.update()
+        if not initial:
+            self.progress_text.update()
 
     def _show_completion(self):
         self.card_container.content = ft.Column([

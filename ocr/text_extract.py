@@ -990,7 +990,7 @@ def dedup_and_sort(entries):
             seen.add(word)
             unique.append(entry)
 
-    unique.sort(key=lambda x: x.get('word', '').lower())
+    # unique.sort(key=lambda x: x.get(word, "").lower())  # 不按字母排序，保留书本原序
     return unique
 
 

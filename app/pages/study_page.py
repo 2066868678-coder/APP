@@ -14,9 +14,10 @@
 数据来源：后端API（真实书本数据）
 """
 
-import sys, os
+import sys, os, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+import threading
 import flet as ft
 from app.services import api_service
 
@@ -39,6 +40,9 @@ class StudyPage:
         self.action_buttons = ft.Container(visible=False)
 
     def build(self):
+        # 先加载数据
+        words, target, done = self._load_data()
+
         header = ft.Container(
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.MENU_BOOK, color=ft.Colors.GREEN, size=22),
@@ -49,9 +53,6 @@ class StudyPage:
             padding=ft.Padding(left=16, top=16, right=16, bottom=16),
         )
 
-        self.card_container.content = self._build_loading()
-
-        # 记得/忘记按钮
         self.action_buttons = ft.Container(
             content=ft.Row([
                 ft.ElevatedButton("忘记", icon=ft.Icons.CLOSE, color=ft.Colors.RED,
@@ -68,11 +69,48 @@ class StudyPage:
             visible=False,
         )
 
-        self._load_data()
+        if words:
+            self.words = words
+            self.total_new = target
+            self.new_words_done = done
+            self.word_index = 0
+            self.remaining_queue = []
+            # 直接构建卡片（不调用_show_current_word，避免.update()问题）
+            wd = words[0]
+            self.flipped = False
+            front = ft.Container(
+                content=ft.Column([
+                    ft.Container(expand=True),
+                    ft.Text(wd['word'], size=40, weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.BLACK87, text_align=ft.TextAlign.CENTER),
+                    ft.Text(wd.get('phonetic',''), size=16, color=ft.Colors.GREY, italic=True,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text("点击查看详情", size=13, color=ft.Colors.GREY_400,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Container(expand=True),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
+                padding=ft.Padding(left=30, top=30, right=30, bottom=30),
+            )
+            self.card_container.content = ft.Column([ft.Container(
+                content=front, bgcolor=ft.Colors.WHITE, border_radius=20,
+                shadow=ft.BoxShadow(blur_radius=12, color=ft.Colors.BLACK12, offset=ft.Offset(0, 6)),
+                margin=ft.Margin(left=24, right=24, top=16, bottom=16),
+                ink=True, on_click=self._flip_card,
+            )], spacing=0, tight=True)
+            self.progress_text.value = f"今日: {done}/{target}  |  1/{len(words)}"
+        else:
+            self.card_container.content = ft.Container(
+                content=ft.Column([
+                    ft.Container(expand=True),
+                    ft.Icon(ft.Icons.MENU_BOOK_OUTLINED, size=64, color=ft.Colors.GREY_300),
+                    ft.Text("暂无单词数据", size=16, color=ft.Colors.GREY),
+                    ft.Container(expand=True),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER), expand=True,
+            )
+            self.progress_text.value = "今日: 0/0"
+
         return ft.Column([header, ft.Container(content=self.card_container, expand=True),
                           self.action_buttons], spacing=0, tight=True)
-
-    def _build_loading(self):
         return ft.Container(
             content=ft.Column([
                 ft.Container(expand=True),
@@ -100,52 +138,35 @@ class StudyPage:
         )
 
     def _load_data(self):
-        """异步加载数据"""
-        def _load_data(self):
-            try:
-                plan = api_service.get_today_plan()
-                today_words = api_service.get_today_words()
-                words = []
-                daily_target = 20
-                words_done = 0
-                if plan and plan.get('plan'):
-                    daily_target = plan['plan'].get('new_words_target', 20)
-                    words_done = plan['plan'].get('new_words_done', 0)
-                if today_words and today_words.get('new_words'):
-                    words = today_words['new_words']
-                if not words:
-                    resp = api_service.get_new_words_for_study(10)
-                    if resp and resp.get('words'):
-                        words = resp['words']
-            except Exception:
-                words = []
-                daily_target = 20
-                words_done = 0
-            self._data_loaded(words, daily_target, words_done)
+        """返回 (words, target, done)"""
+        try:
+            plan = api_service.get_today_plan()
+            today_words = api_service.get_today_words()
+            words = []
+            target = 20
+            done = 0
+            if plan and plan.get('plan'):
+                target = plan['plan'].get('new_words_target', 20)
+                done = plan['plan'].get('new_words_done', 0)
+            if today_words and today_words.get('new_words'):
+                words = today_words['new_words']
+            if not words:
+                resp = api_service.get_new_words_for_study(10)
+                if resp and resp.get('words'):
+                    words = resp['words']
+        except Exception:
+            words = []
+            target = 20
+            done = 0
+        return words, target, done
 
-        
-
-    def _data_loaded(self, words, daily_target, done):
-        if not words:
-            self.card_container.content = self._build_empty(
-                "暂无单词数据\n请确认后端已启动且数据库已导入")
-            self.progress_text.value = "今日进度: 0/0"
-            self.action_buttons.visible = False
-            self.page.update()
-            return
-        self.words = words
-        self.total_new = daily_target
-        self.new_words_done = done
-        self.word_index = 0
-        self.remaining_queue = []
-        self._show_current_word()
-
-    def _show_current_word(self):
+    def _show_current_word(self, initial=False):
         wd = self._get_word()
         if not wd:
             self.card_container.content = self._build_empty()
             self.action_buttons.visible = False
-            self.page.update()
+            if not initial:
+                self.page.update()
             return
 
         self.flipped = False
@@ -175,8 +196,9 @@ class StudyPage:
 
         self.action_buttons.visible = False
         self.card_container.content = ft.Column([card], spacing=0, tight=True)
-        self._update_progress()
-        self.page.update()
+        self._update_progress(initial=initial)
+        if not initial:
+            self.page.update()
 
     def _flip_card(self, e):
         if self.flipped:
@@ -288,12 +310,13 @@ class StudyPage:
             return None
         return self.words[self.word_index]
 
-    def _update_progress(self):
+    def _update_progress(self, initial=False):
         total = max(self.total_new, len(self.words))
         cur = self.word_index + 1
         done = self.new_words_done
         self.progress_text.value = f"今日新词: {done}/{total}  |  当前 {cur}/{total}"
-        self.progress_text.update()
+        if not initial:
+            self.progress_text.update()
 
     def _show_completion(self):
         self.card_container.content = ft.Column([

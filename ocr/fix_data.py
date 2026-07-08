@@ -183,7 +183,7 @@ def main():
         e.pop('_needs_review', None)
         deduped.append(e)
 
-    deduped.sort(key=lambda x: x['word'].lower())
+    # deduped.sort(key=lambda x: x["word"].lower())  # 不排序，保留原序
 
     # 保存
     json.dump(deduped, open(OUTPUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)

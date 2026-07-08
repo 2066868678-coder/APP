@@ -103,7 +103,7 @@ class HomePage:
                 bgcolor=ft.Colors.WHITE, border_radius=12,
             ),
         ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
-        self._container.update()
+        # self._container已由build()返回，不需要update()
 
     def _sc(self, label, value, icon, color):
         return ft.Container(

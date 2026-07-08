@@ -36,12 +36,12 @@ class StatisticsPage:
         return self._container
 
     def _load_data(self):
-            try:
-                stats = api_service.get_stats()
-            except Exception:
-                stats = None
-            self._render(stats)
-        
+        try:
+            stats = api_service.get_stats()
+        except Exception:
+            stats = None
+        self._render(stats)
+
 
     def _render(self, stats):
         s = stats or {}
@@ -145,7 +145,7 @@ class StatisticsPage:
         ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
 
         self._container.content = content
-        self._container.update()
+        # self._container已由build()返回，不需要update()
 
     def _ov(self, label, value, color):
         return ft.Container(
