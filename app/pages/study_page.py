@@ -75,35 +75,17 @@ class StudyPage:
             self.new_words_done = done
             self.word_index = 0
             self.remaining_queue = []
-            # 直接构建卡片（不调用_show_current_word，避免.update()问题）
-            wd = words[0]
-            self.flipped = False
-            front = ft.Container(
-                content=ft.Column([
-                    ft.Container(expand=True),
-                    ft.Text(wd['word'], size=40, weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.BLACK87, text_align=ft.TextAlign.CENTER),
-                    ft.Text(wd.get('phonetic',''), size=16, color=ft.Colors.GREY, italic=True,
-                            text_align=ft.TextAlign.CENTER),
-                    ft.Text("点击查看详情", size=13, color=ft.Colors.GREY_400,
-                            text_align=ft.TextAlign.CENTER),
-                    ft.Container(expand=True),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
-                padding=ft.Padding(left=30, top=30, right=30, bottom=30),
-            )
-            self.card_container.content = ft.Column([ft.Container(
-                content=front, bgcolor=ft.Colors.WHITE, border_radius=20,
-                shadow=ft.BoxShadow(blur_radius=12, color=ft.Colors.BLACK12, offset=ft.Offset(0, 6)),
-                margin=ft.Margin(left=24, right=24, top=16, bottom=16),
-                ink=True, on_click=self._flip_card,
-            )], spacing=0, tight=True)
-            self.progress_text.value = f"今日: {done}/{target}  |  1/{len(words)}"
+            self._show_current_word(initial=True)
         else:
             self.card_container.content = ft.Container(
                 content=ft.Column([
                     ft.Container(expand=True),
                     ft.Icon(ft.Icons.MENU_BOOK_OUTLINED, size=64, color=ft.Colors.GREY_300),
-                    ft.Text("暂无单词数据", size=16, color=ft.Colors.GREY),
+                    ft.Text("暂无新词可学\n请先在设置中查看每日目标", size=16, color=ft.Colors.GREY,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=12),
+                    ft.ElevatedButton("去设置", icon=ft.Icons.SETTINGS,
+                        on_click=lambda e: self.app.switch_to_page(4)),
                     ft.Container(expand=True),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER), expand=True,
             )
@@ -111,16 +93,6 @@ class StudyPage:
 
         return ft.Column([header, ft.Container(content=self.card_container, expand=True),
                           self.action_buttons], spacing=0, tight=True)
-        return ft.Container(
-            content=ft.Column([
-                ft.Container(expand=True),
-                ft.ProgressRing(color=ft.Colors.GREEN),
-                ft.Container(height=16),
-                ft.Text("正在从书本加载单词...", size=16, color=ft.Colors.GREY),
-                ft.Container(expand=True),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            expand=True,
-        )
 
     def _build_empty(self, msg="🎉 今日新词已学完！"):
         return ft.Container(
@@ -143,20 +115,20 @@ class StudyPage:
             plan = api_service.get_today_plan()
             today_words = api_service.get_today_words()
             words = []
-            target = 20
+            target = api_service.get_daily_target()
             done = 0
             if plan and plan.get('plan'):
-                target = plan['plan'].get('new_words_target', 20)
+                target = plan['plan'].get('new_words_target', target)
                 done = plan['plan'].get('new_words_done', 0)
             if today_words and today_words.get('new_words'):
                 words = today_words['new_words']
             if not words:
-                resp = api_service.get_new_words_for_study(10)
+                resp = api_service.get_new_words_for_study()
                 if resp and resp.get('words'):
                     words = resp['words']
         except Exception:
             words = []
-            target = 20
+            target = api_service.get_daily_target()
             done = 0
         return words, target, done
 

@@ -102,6 +102,19 @@ class HomePage:
                 padding=ft.Padding(left=16, top=16, right=16, bottom=16),
                 bgcolor=ft.Colors.WHITE, border_radius=12,
             ),
+            ft.Container(height=8),
+            ft.Container(
+                content=ft.Column([
+                    ft.Row([ft.Icon(ft.Icons.INFO, color=ft.Colors.BLUE, size=16),
+                            ft.Text("💡 下次打开", size=14, weight=ft.FontWeight.BOLD),
+                            ft.Container(expand=True)]),
+                    ft.Container(height=4),
+                    ft.Text("双击项目目录的 start.bat → 浏览器自动打开",
+                            size=13, color=ft.Colors.GREY_600),
+                ], spacing=0),
+                padding=ft.Padding(left=16, top=12, right=16, bottom=12),
+                bgcolor=ft.Colors.BLUE_50, border_radius=12,
+            ),
         ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
         # self._container已由build()返回，不需要update()
 

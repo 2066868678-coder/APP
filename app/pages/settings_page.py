@@ -6,7 +6,7 @@
 系统设置：每日目标、数据导出、重置、关于
 """
 
-import sys, os, json
+import sys, os, json, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import flet as ft
@@ -48,15 +48,45 @@ class SettingsPage:
     def __init__(self, app):
         self.app = app
         self.page = app.page
+        # 每日目标相关状态
+        self._target_value = ft.TextField(
+            value=str(api_service.get_daily_target()),
+            width=80,
+            height=42,
+            text_size=16,
+            text_align=ft.TextAlign.CENTER,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            border=ft.InputBorder.OUTLINE,
+            border_color=ft.Colors.GREEN,
+            content_padding=ft.Padding(left=8, right=8, top=6, bottom=6),
+        )
 
     def build(self):
+        # 每日学习目标
         daily = ft.Container(
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.TRACK_CHANGES, color=ft.Colors.GREEN, size=20),
                         ft.Text("每日学习目标", size=16, weight=ft.FontWeight.BOLD)]),
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
-                ft.Container(height=8),
-                self._row("每天新学单词", "20 个"),
+                ft.Container(height=12),
+                ft.Row([
+                    ft.Text("每天新学单词", size=14, color=ft.Colors.GREY_700),
+                    ft.Container(expand=True),
+                    self._target_value,
+                ]),
+                ft.Row([
+                    ft.Container(expand=True),
+                    ft.ElevatedButton(
+                        "保存目标",
+                        icon=ft.Icons.SAVE,
+                        style=ft.ButtonStyle(
+                            bgcolor=ft.Colors.GREEN,
+                            color=ft.Colors.WHITE,
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                        ),
+                        on_click=self._save_target,
+                    ),
+                ]),
                 ft.Container(height=4),
                 ft.Text("建议：每天10-20个，有基础可30-50个",
                         size=12, color=ft.Colors.GREY_400, italic=True),
@@ -65,6 +95,7 @@ class SettingsPage:
             bgcolor=ft.Colors.WHITE, border_radius=12,
         )
 
+        # 数据管理
         data_mgmt = ft.Container(
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.STORAGE, color=ft.Colors.ORANGE, size=20),
@@ -81,6 +112,30 @@ class SettingsPage:
             bgcolor=ft.Colors.WHITE, border_radius=12,
         )
 
+        # 启动帮助
+        launch_help = ft.Container(
+            content=ft.Column([
+                ft.Row([ft.Icon(ft.Icons.PLAY_CIRCLE_OUTLINE, color=ft.Colors.BLUE, size=20),
+                        ft.Text("下次如何打开", size=16, weight=ft.FontWeight.BOLD)]),
+                ft.Divider(height=1, color=ft.Colors.GREY_300),
+                ft.Container(height=8),
+                ft.Text("在项目目录双击 start.bat 即可启动", size=14, color=ft.Colors.BLACK87),
+                ft.Container(height=4),
+                ft.Text("或手动运行:", size=13, color=ft.Colors.GREY_600),
+                ft.Container(
+                    content=ft.Text("cd E:\\APP\npython run_app.py", size=13,
+                                    color=ft.Colors.BLUE_700, font_family="monospace"),
+                    padding=ft.Padding(left=8, top=6, right=8, bottom=6),
+                    bgcolor=ft.Colors.BLUE_50, border_radius=6,
+                ),
+                ft.Container(height=4),
+                ft.Text("浏览器打开 http://localhost:8551", size=13, color=ft.Colors.GREY_600),
+            ], spacing=0),
+            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
+            bgcolor=ft.Colors.WHITE, border_radius=12,
+        )
+
+        # 关于
         about = ft.Container(
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.INFO, color=ft.Colors.GREY, size=20),
@@ -101,6 +156,7 @@ class SettingsPage:
         return ft.ListView([
             daily, ft.Container(height=8),
             data_mgmt, ft.Container(height=8),
+            launch_help, ft.Container(height=8),
             about, ft.Container(height=16),
         ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
 
@@ -111,10 +167,27 @@ class SettingsPage:
             ft.Text(value, size=14, color=ft.Colors.BLACK87),
         ])
 
+    def _save_target(self, e):
+        try:
+            val = int(self._target_value.value)
+            if val < 1:
+                self.app.show_snackbar("每日目标至少为1", ft.Colors.ORANGE)
+                return
+            if val > 200:
+                self.app.show_snackbar("目标太高了，建议不超过50", ft.Colors.ORANGE)
+                return
+            ok = api_service.set_daily_target(val)
+            if ok:
+                self.app.show_snackbar(f"每日新词目标已设为 {val} 个")
+            else:
+                self.app.show_snackbar("保存失败", ft.Colors.RED)
+        except ValueError:
+            self.app.show_snackbar("请输入有效数字", ft.Colors.ORANGE)
+
     def _export_data(self, e):
         path, count = _export_words()
         if path and count > 0:
-            self.app.show_snackbar(f"已导出 {count} 个单词到项目根目录的 words_export.json")
+            self.app.show_snackbar(f"已导出 {count} 个单词到 words_export.json")
         else:
             self.app.show_snackbar("导出失败：没有数据")
 

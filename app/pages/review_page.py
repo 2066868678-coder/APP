@@ -198,7 +198,8 @@ class ReviewPage:
         if wd.get('examples'):
             sections.append(self._sec("📖 例句", wd['examples']))
         if wd.get('memory_methods'):
-            sections.append(self._sec("💡 记忆方法", wd['memory_methods']))
+            sections.append(self._sec("💡 记忆方法", wd['memory_methods'],
+                                      ft.Colors.AMBER_50, ft.Colors.AMBER_200))
         if wd.get('collocations'):
             sections.append(self._sec("📝 固定搭配", wd['collocations']))
         if wd.get('extensions'):
@@ -216,14 +217,20 @@ class ReviewPage:
         self.card_container.content = ft.Column([card], spacing=0, tight=True)
         self.page.update()
 
-    def _sec(self, title, content):
+    def _sec(self, title, content, bg=None, border_color=None):
         return ft.Container(
             content=ft.Column([
-                ft.Text(title, size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_800),
+                ft.Row([ft.Text(title, size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_800)]),
                 ft.Container(height=4),
                 ft.Text(content, size=14, color=ft.Colors.BLACK87),
             ], spacing=0),
-            padding=ft.Padding(left=10, top=10, right=10, bottom=10), bgcolor=ft.Colors.GREY_50, border_radius=8,
+            padding=ft.Padding(left=10, top=10, right=10, bottom=10),
+            bgcolor=bg or ft.Colors.GREY_50,
+            border_radius=8,
+            border=ft.Border(
+                left=ft.BorderSide(1, border_color), right=ft.BorderSide(1, border_color),
+                top=ft.BorderSide(1, border_color), bottom=ft.BorderSide(1, border_color)
+            ) if border_color else None,
         )
 
     def _handle_result(self, result):

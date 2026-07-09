@@ -52,8 +52,14 @@ def get_words(page=1, page_size=20, search=None):
         s.close()
 
 
-def get_new_words(count=10):
+def get_new_words(count=None):
     """获取从未学过的词"""
+    if count is None:
+        saved = get_setting('daily_new_words_target', '20')
+        try:
+            count = int(saved)
+        except ValueError:
+            count = 10
     s = _get_session()
     try:
         studied = s.query(StudyRecord.word_id).distinct().all()
@@ -68,10 +74,39 @@ def get_new_words(count=10):
         s.close()
 
 
+# ========== 设置 ==========
+
+def get_setting(key, default=None):
+    s = _get_session()
+    try:
+        setting = s.query(SystemSettings).filter(SystemSettings.key == key).first()
+        return setting.value if setting else default
+    finally:
+        s.close()
+
+def set_setting(key, value):
+    s = _get_session()
+    try:
+        setting = s.query(SystemSettings).filter(SystemSettings.key == key).first()
+        if setting:
+            setting.value = str(value)
+            setting.updated_at = datetime.now()
+        else:
+            setting = SystemSettings(key=key, value=str(value))
+            s.add(setting)
+        s.commit()
+        return True
+    except:
+        s.rollback()
+        return False
+    finally:
+        s.close()
+
+
 # ========== 学习记录 ==========
 
 def record_study(word_id, study_type, result):
-    """记录学习行为"""
+    """记录学习行为（防重复计数）"""
     s = _get_session()
     try:
         from backend.ebbinghaus import get_next_review_interval
@@ -87,22 +122,39 @@ def record_study(word_id, study_type, result):
             result=result, review_interval=next_interval,
         )
         s.add(record)
+        s.flush()  # 写入DB，获得record.id
+
+        today = date.today()
+        # 防重复：同词同天同类型之前是否已经计过数了
+        today_start = datetime.combine(today, datetime.min.time())
+        today_end = datetime.combine(today, datetime.max.time())
+        already_counted = s.query(StudyRecord).filter(
+            StudyRecord.word_id == word_id,
+            StudyRecord.study_type == study_type,
+            StudyRecord.studied_at.between(today_start, today_end),
+            StudyRecord.id != record.id,
+        ).count() > 0
 
         # 更新今日计划
-        today = date.today()
         plan = s.query(DailyPlan).filter(DailyPlan.plan_date == today).first()
-        if plan:
-            if study_type == 'new':
-                plan.new_words_done += 1
+        if not already_counted:
+            if plan:
+                if study_type == 'new':
+                    plan.new_words_done = (plan.new_words_done or 0) + 1
+                elif study_type == 'review':
+                    plan.review_done = (plan.review_done or 0) + 1
             else:
-                plan.review_done += 1
-        else:
-            plan = DailyPlan(
-                plan_date=today, new_words_target=20,
-                new_words_done=1 if study_type == 'new' else 0,
-                review_done=1 if study_type == 'review' else 0,
-            )
+                plan = DailyPlan(
+                    plan_date=today,
+                    new_words_target=20,
+                    new_words_done=1 if study_type == 'new' else 0,
+                    review_done=1 if study_type == 'review' else 0,
+                )
+                s.add(plan)
+        elif not plan:
+            plan = DailyPlan(plan_date=today, new_words_target=20)
             s.add(plan)
+
         s.commit()
         return True
     except Exception as e:
@@ -122,9 +174,14 @@ def get_today_plan():
         plan = s.query(DailyPlan).filter(DailyPlan.plan_date == today).first()
 
         if not plan:
-            # 自动创建
+            # 自动创建，目标从设置中读取
+            saved_target = get_setting('daily_new_words_target', '20')
+            try:
+                target = int(saved_target)
+            except ValueError:
+                target = 20
             plan = DailyPlan(
-                plan_date=today, new_words_target=20,
+                plan_date=today, new_words_target=target,
                 new_words_done=0, review_done=0,
             )
             s.add(plan)
@@ -150,7 +207,7 @@ def get_today_plan():
 
 
 def get_today_words():
-    """获取今日要学的单词（新词+复习）"""
+    """获取今日要学的单词（新词+复习），锁定当日单词列表"""
     s = _get_session()
     try:
         today = date.today()
@@ -160,21 +217,65 @@ def get_today_words():
         review_words = []
 
         if plan and plan.word_ids_new:
-            ids = [int(x) for x in plan.word_ids_new.split(',') if x]
-            new_words = s.query(Word).filter(Word.id.in_(ids)).all() if ids else []
+            ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
+            new_words = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
 
         if plan and plan.word_ids_review:
-            ids = [int(x) for x in plan.word_ids_review.split(',') if x]
-            review_words = s.query(Word).filter(Word.id.in_(ids)).all() if ids else []
+            ids = [int(x) for x in plan.word_ids_review.split(',') if x.strip()]
+            review_words = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
 
-        # 如果没有预设新词，取未学过的
+        # 今日新词未锁定时：从本地算出并锁定
         if not new_words:
             studied = s.query(StudyRecord.word_id).distinct().all()
             studied_ids = [r[0] for r in studied]
             q = s.query(Word)
             if studied_ids:
                 q = q.filter(~Word.id.in_(studied_ids))
-            new_words = q.order_by(Word.id).limit(10).all()
+
+            saved_target = get_setting('daily_new_words_target', '20')
+            try:
+                limit_n = int(saved_target)
+            except ValueError:
+                limit_n = 10
+
+            available = q.order_by(Word.id).limit(limit_n).all()
+            new_words = available
+
+            # 锁定到plan中
+            if available:
+                ids_str = ','.join(str(w.id) for w in available)
+                if plan:
+                    plan.word_ids_new = ids_str
+                else:
+                    plan = DailyPlan(
+                        plan_date=today,
+                        new_words_target=limit_n,
+                        word_ids_new=ids_str,
+                    )
+                    s.add(plan)
+                s.commit()
+
+        # 今日复习未锁定时：用艾宾浩斯算法计算
+        if not review_words:
+            from backend.ebbinghaus import calculate_todays_review
+            all_records = s.query(StudyRecord).all()
+            records_map = {}
+            for rec in all_records:
+                records_map.setdefault(rec.word_id, []).append({
+                    'word_id': rec.word_id,
+                    'studied_at': rec.studied_at.isoformat() if rec.studied_at else '',
+                    'review_interval': rec.review_interval,
+                    'result': rec.result,
+                })
+            due_ids = calculate_todays_review(records_map, today)
+            if due_ids:
+                review_words = s.query(Word).filter(Word.id.in_(due_ids)).order_by(Word.id).all()
+                if plan:
+                    plan.word_ids_review = ','.join(str(w.id) for w in review_words)
+                else:
+                    plan = DailyPlan(plan_date=today, word_ids_review=','.join(str(w.id) for w in review_words))
+                    s.add(plan)
+                s.commit()
 
         return {
             'new_words': [w.to_dict() for w in new_words],
@@ -182,7 +283,7 @@ def get_today_words():
             'new_words_done': plan.new_words_done if plan else 0,
             'new_words_target': plan.new_words_target if plan else 20,
             'review_done': plan.review_done if plan else 0,
-            'review_target': plan.review_target if plan else 0,
+            'review_target': plan.review_target if plan else len(review_words),
         }
     finally:
         s.close()

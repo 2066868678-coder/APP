@@ -33,7 +33,14 @@ def get_today_words():
     return local_db.get_today_words()
 
 def set_daily_target(target):
-    return {'success': False}
+    return local_db.set_setting('daily_new_words_target', str(target))
+
+def get_daily_target():
+    v = local_db.get_setting('daily_new_words_target', '20')
+    try:
+        return int(v)
+    except ValueError:
+        return 20
 
 # ========== 统计 ==========
 

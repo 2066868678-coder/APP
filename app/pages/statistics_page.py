@@ -3,7 +3,7 @@
 """
 单词突围 - 统计页面
 ==================
-展示学习进度和统计数据（加载后端真实数据）
+展示学习进度和统计数据（直接从本地数据库读取）
 """
 
 import sys, os
@@ -22,26 +22,16 @@ class StatisticsPage:
         self._container = ft.Container(expand=True)
 
     def build(self):
-        self._container.content = ft.Container(
-            content=ft.Column([
-                ft.Container(expand=True),
-                ft.ProgressRing(color=ft.Colors.PURPLE),
-                ft.Container(height=16),
-                ft.Text("加载统计数据...", size=16, color=ft.Colors.GREY),
-                ft.Container(expand=True),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            expand=True,
-        )
-        self._load_data()
+        # 直接从本地数据库加载数据（瞬间完成）
+        stats = self._safe_get_stats()
+        self._render(stats)
         return self._container
 
-    def _load_data(self):
+    def _safe_get_stats(self):
         try:
-            stats = api_service.get_stats()
+            return api_service.get_stats()
         except Exception:
-            stats = None
-        self._render(stats)
-
+            return None
 
     def _render(self, stats):
         s = stats or {}
@@ -145,7 +135,6 @@ class StatisticsPage:
         ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
 
         self._container.content = content
-        # self._container已由build()返回，不需要update()
 
     def _ov(self, label, value, color):
         return ft.Container(
