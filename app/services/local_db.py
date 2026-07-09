@@ -19,10 +19,19 @@ from backend.models import Base, Word, StudyRecord, DailyPlan, SystemSettings, i
 
 # 数据库路径（相对于项目根目录）
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "database")
-DB_PATH = os.path.join(DB_DIR, "words.db")
 os.makedirs(DB_DIR, exist_ok=True)
 
-_engine = init_database(f'sqlite:///{DB_PATH}')
+# 优先使用环境变量中的数据库URL（部署时用PostgreSQL）
+DB_URL = os.environ.get('DATABASE_URL')
+if DB_URL:
+    DB_URL = DB_URL.replace('postgres://', 'postgresql://')
+    print(f"使用云端数据库: PostgreSQL")
+else:
+    DB_PATH = os.path.join(DB_DIR, "words.db")
+    DB_URL = f'sqlite:///{DB_PATH}'
+    print(f"使用本地数据库: {DB_PATH}")
+
+_engine = init_database(DB_URL)
 
 
 def _get_session():

@@ -114,8 +114,21 @@ class SystemSettings(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
-def init_database(db_path='sqlite:///database/words.db'):
+def get_db_url():
+    """获取数据库URL：优先使用环境变量（PostgreSQL），否则用SQLite"""
+    env_url = os.environ.get('DATABASE_URL')
+    if env_url:
+        # Render的DATABASE_URL是postgres://格式，SQLAlchemy需要postgresql://
+        return env_url.replace('postgres://', 'postgresql://')
+    return 'sqlite:///database/words.db'
+
+
+def init_database(db_url=None):
     """初始化数据库，创建所有表"""
-    engine = create_engine(db_path, echo=False, connect_args={'check_same_thread': False})
+    if db_url is None:
+        db_url = get_db_url()
+    is_sqlite = db_url.startswith('sqlite')
+    connect_args = {'check_same_thread': False} if is_sqlite else {}
+    engine = create_engine(db_url, echo=False, connect_args=connect_args)
     Base.metadata.create_all(engine)
     return engine

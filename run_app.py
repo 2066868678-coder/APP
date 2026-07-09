@@ -19,12 +19,20 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
 # 检查数据库是否为空，如果是则自动导入单词
-DB_PATH = os.path.join(ROOT, 'database', 'words.db')
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+DB_URL = os.environ.get('DATABASE_URL')
+if DB_URL:
+    DB_URL = DB_URL.replace('postgres://', 'postgresql://')
+    print(f"使用云端数据库: PostgreSQL")
+else:
+    DB_PATH = os.path.join(ROOT, 'database', 'words.db')
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    DB_URL = f'sqlite:///{DB_PATH}'
+    print(f"使用本地数据库: {DB_PATH}")
+
 try:
     from backend.models import init_database, Word, Base
     from sqlalchemy.orm import Session
-    engine = init_database(f'sqlite:///{DB_PATH}')
+    engine = init_database(DB_URL)
     Base.metadata.create_all(engine)
     session = Session(engine)
     word_count = session.query(Word).count()
@@ -39,7 +47,7 @@ except Exception as e:
     if os.path.exists(json_path):
         from backend.models import init_database, Word, Base
         from sqlalchemy.orm import Session
-        engine = init_database(f'sqlite:///{DB_PATH}')
+        engine = init_database(DB_URL)
         Base.metadata.create_all(engine)
         with open(json_path, 'r', encoding='utf-8') as f:
             words_data = json.load(f)
