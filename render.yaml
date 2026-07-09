@@ -1,0 +1,14 @@
+# 单词突围 - Render部署配置
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: word-breakthrough
+    env: python
+    region: singapore  # 新加坡节点，国内访问更快
+    plan: free
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: python run_app.py
+    envVars:
+      - key: PORT
+        value: 10000
