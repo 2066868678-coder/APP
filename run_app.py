@@ -12,10 +12,63 @@ Web模式下：
   手机(同WiFi): http://192.168.3.59:8550
 """
 
-import sys, os, argparse
+import sys, os, argparse, json
 
 # 添加项目根目录到路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ROOT)
+
+# 检查数据库是否为空，如果是则自动导入单词
+DB_PATH = os.path.join(ROOT, 'database', 'words.db')
+if os.path.exists(DB_PATH):
+    try:
+        from backend.models import init_database, Word
+        from sqlalchemy.orm import Session
+        engine = init_database(f'sqlite:///{DB_PATH}')
+        session = Session(engine)
+        word_count = session.query(Word).count()
+        session.close()
+        if word_count == 0:
+            raise ValueError("数据库为空，需要重新导入")
+        print(f"数据库已有 {word_count} 个单词")
+    except Exception as e:
+        print(f"正在导入单词数据... ({e})")
+        json_path = os.path.join(ROOT, 'ocr/output/words_export_完整.json')
+        if os.path.exists(json_path):
+            from backend.models import init_database, Word, Base
+            from sqlalchemy.orm import Session
+            engine = init_database(f'sqlite:///{DB_PATH}')
+            Base.metadata.create_all(engine)
+            with open(json_path, 'r', encoding='utf-8') as f:
+                words_data = json.load(f)
+            session = Session(engine)
+            count = 0
+            for item in words_data:
+                word = item.get('word', '').strip().lower()
+                if not word:
+                    continue
+                def to_str(val):
+                    if isinstance(val, list): return ' | '.join(val)
+                    return str(val) if val else ''
+                new_word = Word(
+                    word=word, phonetic=to_str(item.get('phonetic', '')),
+                    pos=to_str(item.get('pos', '')), meaning=to_str(item.get('meaning', '')),
+                    examples=to_str(item.get('examples', '')),
+                    memory_methods=to_str(item.get('memory_methods', '')),
+                    derivatives=to_str(item.get('derivatives', '')),
+                    collocations=to_str(item.get('collocations', '')),
+                    extensions=to_str(item.get('extensions', '')),
+                    chapter=item.get('chapter', ''),
+                    source_page=item.get('source_page', 0),
+                    source_book=item.get('source_book', '单词突围5200'),
+                )
+                session.add(new_word)
+                count += 1
+            session.commit()
+            session.close()
+            print(f"✅ 导入完成！共 {count} 个单词")
+        else:
+            print(f"⚠️ 找不到单词数据文件: {json_path}")
 
 # 检查后端是否运行
 import socket
