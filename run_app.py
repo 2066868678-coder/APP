@@ -37,12 +37,13 @@ try:
     session = Session(engine)
     word_count = session.query(Word).count()
 
-    # 检查是否需要重新导入（旧数据source_page全为0，说明数据已损坏）
+    # 检查是否需要重新导入（旧数据关键词首字母排序，第一个词是'abandon'，正确数据第一个是'enter'）
     need_reimport = False
     if word_count > 0:
-        zero_pg = session.query(Word).filter(Word.source_page == 0).count()
-        if zero_pg == word_count:
-            print(f"检测到旧数据（{word_count}个单词，source_page全为0），需要重新导入...")
+        from sqlalchemy import func
+        first_word = session.query(Word.word).order_by(Word.id).first()
+        if first_word and first_word[0].lower() not in ('enter', 'eat'):
+            print(f"检测到旧数据（首词为'{first_word[0]}'，正确应为'enter'），需要重新导入...")
             need_reimport = True
 
     if word_count > 0 and not need_reimport:
