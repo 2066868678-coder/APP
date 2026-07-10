@@ -171,19 +171,23 @@ class WordBreakthroughApp:
             self.page.update()
 
     def show_about(self, e):
-        """显示关于对话框"""
+        from version import VERSION, VERSION_DATE, CHANGES, DESCRIPTION
+        changes_text = "\n".join(CHANGES)
         about_dlg = ft.AlertDialog(
             title=ft.Text("关于 单词突围"),
             content=ft.Column(
                 controls=[
-                    ft.Text("单词突围（私人定制版）"),
-                    ft.Text("基于《单词突围5200》一书"),
-                    ft.Text("艾宾浩斯遗忘曲线智能复习"),
+                    ft.Text(f"版本 {VERSION}（{VERSION_DATE}）", weight=ft.FontWeight.BOLD),
+                    ft.Text(DESCRIPTION, size=12),
                     ft.Divider(),
-                    ft.Text(f"版本：1.0.0", size=12, color=ft.Colors.GREY),
+                    ft.Text(f"上册收录 {2281} 个单词", size=12),
+                    ft.Text("艾宾浩斯遗忘曲线智能复习", size=12),
+                    ft.Divider(),
+                    ft.Text(changes_text, size=11, color=ft.Colors.GREY),
                 ],
                 tight=True,
                 spacing=5,
+                width=320,
             ),
             actions=[
                 ft.TextButton("确定", on_click=lambda e: self.close_dialog(about_dlg)),
