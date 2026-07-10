@@ -171,19 +171,26 @@ class WordBreakthroughApp:
             self.page.update()
 
     def show_about(self, e):
-        from version import VERSION, VERSION_DATE, CHANGES, DESCRIPTION
-        changes_text = "\n".join(CHANGES)
+        VERSION = "2.0.0"
+        VERSION_DATE = "2026-07-11"
+        CHANGES = (
+            "【2.0.0】2026-07-11\n"
+            "  - 全面修复上册2281个单词数据\n"
+            "  - 修复释义/音标/记忆方法/例句错配\n"
+            "  - 清除PDF提取遗留的格式错误字符\n"
+            "  - 优化数据格式和排版"
+        )
         about_dlg = ft.AlertDialog(
             title=ft.Text("关于 单词突围"),
             content=ft.Column(
                 controls=[
                     ft.Text(f"版本 {VERSION}（{VERSION_DATE}）", weight=ft.FontWeight.BOLD),
-                    ft.Text(DESCRIPTION, size=12),
+                    ft.Text("基于《单词突围5200》的智能背词应用", size=12),
                     ft.Divider(),
                     ft.Text(f"上册收录 {2281} 个单词", size=12),
                     ft.Text("艾宾浩斯遗忘曲线智能复习", size=12),
                     ft.Divider(),
-                    ft.Text(changes_text, size=11, color=ft.Colors.GREY),
+                    ft.Text(CHANGES, size=11, color=ft.Colors.GREY),
                 ],
                 tight=True,
                 spacing=5,
