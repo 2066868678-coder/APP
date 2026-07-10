@@ -37,7 +37,7 @@ try:
     session = Session(engine)
     word_count = session.query(Word).count()
 
-    # 检测旧数据（新数据2281词，老数据是2315或1264词）
+    # 检测旧数据（新数据2281词，老数据2315或1264词）
     need_reimport = False
     if word_count > 0:
         if word_count != 2281:
