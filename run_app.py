@@ -36,11 +36,27 @@ try:
     Base.metadata.create_all(engine)
     session = Session(engine)
     word_count = session.query(Word).count()
-    session.close()
+
+    # 检查是否需要重新导入（旧数据source_page全为0，说明数据已损坏）
+    need_reimport = False
     if word_count > 0:
+        zero_pg = session.query(Word).filter(Word.source_page == 0).count()
+        if zero_pg == word_count:
+            print(f"检测到旧数据（{word_count}个单词，source_page全为0），需要重新导入...")
+            need_reimport = True
+
+    if word_count > 0 and not need_reimport:
         print(f"数据库已有 {word_count} 个单词")
     else:
-        raise ValueError("数据库为空")
+        if need_reimport:
+            # 清空旧数据（包括学习记录和每日计划）
+            from backend.models import StudyRecord, DailyPlan
+            session.query(StudyRecord).delete()
+            session.query(DailyPlan).delete()
+            session.query(Word).delete()
+            session.commit()
+            print("已清空旧数据")
+        raise ValueError("需要导入数据")
 except Exception as e:
     print(f"正在导入单词数据... ({e})")
     json_path = os.path.join(ROOT, 'ocr/output/words_export_完整.json')
@@ -54,9 +70,19 @@ except Exception as e:
         session = Session(engine)
         count = 0
         for item in words_data:
-            word = item.get('word', '').strip().lower()
+            word = item.get('word', '').strip()
             if not word:
                 continue
+
+            # 清理chapter字段
+            chapter = item.get('chapter', '')
+            if chapter and chapter[:5] in ('Part1','Part2','Part3','Part4'):
+                chapter = chapter[:5]
+            elif 'part' in chapter.lower():
+                chapter = chapter[:5].title() if chapter[:5].lower().startswith('part') else 'part'
+            else:
+                chapter = chapter[:5] if chapter else 'part'
+
             def to_str(val):
                 if isinstance(val, list): return ' | '.join(val)
                 return str(val) if val else ''
@@ -68,9 +94,9 @@ except Exception as e:
                 derivatives=to_str(item.get('derivatives', '')),
                 collocations=to_str(item.get('collocations', '')),
                 extensions=to_str(item.get('extensions', '')),
-                chapter=item.get('chapter', ''),
+                chapter=chapter,
                 source_page=item.get('source_page', 0),
-                source_book=item.get('source_book', '单词突围5200'),
+                source_book=item.get('source_book', '单词突围5200 上册'),
             )
             session.add(new_word)
             count += 1

@@ -214,7 +214,7 @@ def list_words(
         total = query.count()
         total_pages = math.ceil(total / page_size)
 
-        words = query.order_by(Word.id).offset(
+        words = query.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).offset(
             (page - 1) * page_size
         ).limit(page_size).all()
 
@@ -254,7 +254,7 @@ def get_new_words_for_study(count: int = Query(10, ge=1, le=50)):
         if studied_ids:
             query = query.filter(~Word.id.in_(studied_ids))
 
-        words = query.order_by(Word.id).limit(count).all()
+        words = query.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(count).all()
 
         return JSONResponse(content={
             'words': [w.to_dict() for w in words],
@@ -473,13 +473,13 @@ def get_todays_unlocked_words():
         if new_word_ids:
             new_words = session.query(Word).filter(
                 Word.id.in_(new_word_ids)
-            ).all()
+            ).order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).all()
 
         review_words = []
         if review_word_ids:
             review_words = session.query(Word).filter(
                 Word.id.in_(review_word_ids)
-            ).all()
+            ).order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).all()
 
         return JSONResponse(content={
             'new_words': [w.to_dict() for w in new_words],
@@ -622,7 +622,7 @@ def export_words_json():
     """导出所有单词为JSON"""
     session = Session(engine)
     try:
-        words = session.query(Word).order_by(Word.id).all()
+        words = session.query(Word).order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).all()
         return JSONResponse(content={
             'words': [w.to_dict() for w in words],
             'total': len(words),
@@ -685,7 +685,7 @@ def sync_download(user_id: str = Query('default')):
         sync_data = json.loads(sync_data_str)
 
         # 获取所有单词数据
-        words = session.query(Word).order_by(Word.id).all()
+        words = session.query(Word).order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).all()
         records = session.query(StudyRecord).order_by(StudyRecord.id).all()
 
         return JSONResponse(content={

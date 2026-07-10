@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from sqlalchemy import create_engine, func, and_
+from sqlalchemy import create_engine, func, and_, asc
 from sqlalchemy.orm import Session
 from backend.models import Base, Word, StudyRecord, DailyPlan, SystemSettings, init_database
 
@@ -55,7 +55,7 @@ def get_words(page=1, page_size=20, search=None):
         if search:
             q = q.filter(Word.word.like(f'%{search}%'))
         total = q.count()
-        words = q.order_by(Word.id).offset((page-1)*page_size).limit(page_size).all()
+        words = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).offset((page-1)*page_size).limit(page_size).all()
         return {'total': total, 'words': [w.to_dict() for w in words]}
     finally:
         s.close()
@@ -77,7 +77,7 @@ def get_new_words(count=None):
         if studied_ids:
             q = q.filter(~Word.id.in_(studied_ids))
         remaining = q.count()
-        words = q.order_by(Word.id).limit(count).all()
+        words = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(count).all()
         return {'words': [w.to_dict() for w in words], 'remaining': remaining}
     finally:
         s.close()
@@ -247,7 +247,7 @@ def get_today_words():
             except ValueError:
                 limit_n = 10
 
-            available = q.order_by(Word.id).limit(limit_n).all()
+            available = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(limit_n).all()
             new_words = available
 
             # 锁定到plan中

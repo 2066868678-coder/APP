@@ -6,7 +6,8 @@
 显示今日学习计划和进度概览（直读本地数据库，飞快）
 """
 
-import sys, os, datetime
+import sys, os
+from datetime import datetime, timezone, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import flet as ft
@@ -43,7 +44,9 @@ class HomePage:
         review_target = p.get('review_target', 0)
         review_done = p.get('review_done', 0)
 
-        hour = datetime.datetime.now().hour
+        # 使用中国时区 (UTC+8) 计算问候语，不受服务器时区影响
+        china_tz = timezone(timedelta(hours=8))
+        hour = datetime.now(china_tz).hour
         if hour < 6: greet = "夜深了"
         elif hour < 9: greet = "早上好"
         elif hour < 12: greet = "上午好"
