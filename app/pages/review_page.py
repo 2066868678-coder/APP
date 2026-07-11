@@ -104,7 +104,7 @@ class ReviewPage:
         if learned > 0:
             msg = msg or f"今日无需复习 ✓\n已学习 {learned} 个单词\n\n新学的单词将在1天后进入复习\n坚持每日学习，复习量会逐渐增加"
         else:
-            msg = msg or "暂无需要复习的单词\n\n先去"学习"页面积累单词\n学完的单词将在1天后进入复习"
+            msg = msg or "暂无需要复习的单词\n\n先去学习页面学单词\n学完的单词将在1天后进入复习"
         return ft.Container(
             content=ft.Column([
                 ft.Container(expand=True),
