@@ -227,7 +227,11 @@ def get_today_words():
 
         if plan and plan.word_ids_new:
             ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
-            new_words = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
+            all_nw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
+            # 过滤已学的（跨设备同步：另一台设备已学的词不再显示）
+            studied_ids_set = set(r[0] for r in s.query(StudyRecord.word_id).filter(
+                StudyRecord.word_id.in_(ids)).distinct().all())
+            new_words = [w for w in all_nw if w.id not in studied_ids_set]
 
         if plan and plan.word_ids_review:
             ids = [int(x) for x in plan.word_ids_review.split(',') if x.strip()]
