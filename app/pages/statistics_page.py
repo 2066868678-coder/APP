@@ -156,34 +156,45 @@ class StatisticsPage:
         learned = [w for w in words if w['studied']]
         unlearned = [w for w in words if not w['studied']]
 
-        def make_list(items, label):
-            if not items:
-                return ft.Text('暂无数据', color=ft.Colors.GREY, size=14)
-            cols = []
-            for w in items[:200]:
-                cols.append(
-                    ft.Row([
-                        ft.Container(width=6, height=6, bgcolor=ft.Colors.GREEN if w['studied'] else ft.Colors.GREY,
-                            border_radius=3, margin=ft.Margin(right=8, top=6, bottom=6, left=0)),
-                        ft.Text(w['word'], size=14, expand=2),
-                        ft.Text(w.get('meaning','')[:35], size=11, color=ft.Colors.GREY_600, expand=3),
-                    ], spacing=4))
-            return ft.Column(cols, spacing=1, scroll=ft.ScrollMode.AUTO, height=400)
+        def make_rows(items, limit=100):
+            rows = []
+            for w in items[:limit]:
+                rows.append(ft.Row([
+                    ft.Container(width=6, height=6, bgcolor=ft.Colors.GREEN if w['studied'] else ft.Colors.GREY,
+                        border_radius=3),
+                    ft.Text(w['word'], size=14, expand=2),
+                    ft.Text(w.get('meaning','')[:30], size=11, color=ft.Colors.GREY_600, expand=3),
+                ], spacing=4))
+            return rows
+
+        segments = []
+        segments.append(ft.Text(f'已学习 ({len(learned)})', size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN))
+        if learned:
+            segments.extend(make_rows(learned, 80))
+            segments.append(ft.Container(height=8))
+        else:
+            segments.append(ft.Text('暂无', color=ft.Colors.GREY, size=13))
+        segments.append(ft.Divider())
+        segments.append(ft.Text(f'未学习 ({len(unlearned)})', size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY))
+        if unlearned:
+            segments.extend(make_rows(unlearned, 80))
+        else:
+            segments.append(ft.Text('暂无', color=ft.Colors.GREY, size=13))
 
         dlg = ft.AlertDialog(
             title=ft.Text(f'总单词列表 ({len(words)}词)'),
-            content=ft.Column([
-                ft.Tabs(selected_index=0, tabs=[
-                    ft.Tab(text=f'已学习 ({len(learned)})',
-                        content=ft.Container(make_list(learned, 'learned'), padding=10)),
-                    ft.Tab(text=f'未学习 ({len(unlearned)})',
-                        content=ft.Container(make_list(unlearned, 'unlearned'), padding=10)),
-                ], expand=True),
-            ], width=360, height=500),
-            actions=[ft.TextButton('关闭', on_click=lambda e: setattr(dlg, 'open', False) or self.page.update())],
+            content=ft.Container(
+                content=ft.Column(segments, scroll=ft.ScrollMode.AUTO),
+                width=360, height=480,
+            ),
+            actions=[ft.TextButton('关闭', on_click=lambda e: self.close_dlg(dlg))],
         )
         self.page.overlay.append(dlg)
         dlg.open = True
+        self.page.update()
+
+    def close_dlg(self, dlg):
+        dlg.open = False
         self.page.update()
 
     def _build_word_list_btn(self):
