@@ -70,11 +70,13 @@ class StudyPage:
         )
 
         if words:
-            self.words = words
+            # 如果是新加载的词（不是保留的已有队列），重置进度
+            if not self.words or words != self.words:
+                self.words = words
+                self.word_index = 0
+                self.remaining_queue = []
             self.total_new = target
             self.new_words_done = done
-            self.word_index = 0
-            self.remaining_queue = []
             self._show_current_word(initial=True)
         else:
             self.card_container.content = ft.Container(
@@ -110,7 +112,11 @@ class StudyPage:
         )
 
     def _load_data(self):
-        """返回 (words, target, done)"""
+        """返回 (words, target, done)，保留未学完的词队列"""
+        # 如果已有词队列且没学完，继续用（切换页面回来时）
+        if self.words and self.word_index < len(self.words):
+            return self.words, self.total_new or 20, self.new_words_done
+
         try:
             plan = api_service.get_today_plan()
             today_words = api_service.get_today_words()
