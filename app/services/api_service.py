@@ -55,3 +55,7 @@ def get_word(word_id):
 
 def get_random_words(count=10):
     return local_db.get_words(page=1, page_size=count)
+
+
+def get_all_words_with_status():
+    return local_db.get_all_words_with_status()

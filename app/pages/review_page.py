@@ -95,7 +95,16 @@ class ReviewPage:
         ], spacing=0, tight=True)
 
     def _build_empty(self, msg=None):
-        msg = msg or "暂无需要复习的单词\n学完新词后系统会根据艾宾浩斯遗忘曲线自动安排复习"
+        from app.services import api_service
+        try:
+            stats = api_service.get_study_stats()
+            learned = stats.get('total_studied', 0) if stats else 0
+        except:
+            learned = 0
+        if learned > 0:
+            msg = msg or f"今日无需复习 ✓\n已学习 {learned} 个单词\n\n新学的单词将在1天后进入复习\n坚持每日学习，复习量会逐渐增加"
+        else:
+            msg = msg or "暂无需要复习的单词\n\n先去"学习"页面积累单词\n学完的单词将在1天后进入复习"
         return ft.Container(
             content=ft.Column([
                 ft.Container(expand=True),

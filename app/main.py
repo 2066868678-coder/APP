@@ -67,75 +67,46 @@ class WordBreakthroughApp:
 
     def build_ui(self):
         """构建主界面"""
-        # 创建页面容器
         self.page_container = ft.Container(
             content=self.home_page.build(),
             expand=True,
         )
 
-        # 底部导航栏
         self.nav_bar = ft.NavigationBar(
             selected_index=0,
             on_change=self.on_nav_change,
             destinations=[
-                ft.NavigationBarDestination(
-                    icon=ft.Icons.HOME_OUTLINED,
-                    selected_icon=ft.Icons.HOME,
-                    label="首页",
-                ),
-                ft.NavigationBarDestination(
-                    icon=ft.Icons.MENU_BOOK_OUTLINED,
-                    selected_icon=ft.Icons.MENU_BOOK,
-                    label="学习",
-                ),
-                ft.NavigationBarDestination(
-                    icon=ft.Icons.AUTO_STORIES_OUTLINED,
-                    selected_icon=ft.Icons.AUTO_STORIES,
-                    label="复习",
-                ),
-                ft.NavigationBarDestination(
-                    icon=ft.Icons.BAR_CHART_OUTLINED,
-                    selected_icon=ft.Icons.BAR_CHART,
-                    label="统计",
-                ),
-                ft.NavigationBarDestination(
-                    icon=ft.Icons.SETTINGS_OUTLINED,
-                    selected_icon=ft.Icons.SETTINGS,
-                    label="设置",
-                ),
+                ft.NavigationBarDestination(icon=ft.Icons.HOME_OUTLINED,
+                    selected_icon=ft.Icons.HOME, label="首页"),
+                ft.NavigationBarDestination(icon=ft.Icons.MENU_BOOK_OUTLINED,
+                    selected_icon=ft.Icons.MENU_BOOK, label="学习"),
+                ft.NavigationBarDestination(icon=ft.Icons.AUTO_STORIES_OUTLINED,
+                    selected_icon=ft.Icons.AUTO_STORIES, label="复习"),
+                ft.NavigationBarDestination(icon=ft.Icons.BAR_CHART_OUTLINED,
+                    selected_icon=ft.Icons.BAR_CHART, label="统计"),
+                ft.NavigationBarDestination(icon=ft.Icons.SETTINGS_OUTLINED,
+                    selected_icon=ft.Icons.SETTINGS, label="设置"),
             ],
-            height=65,
-            bgcolor=ft.Colors.WHITE,
-            shadow_color=ft.Colors.BLACK12,
+            height=65, bgcolor=ft.Colors.WHITE, shadow_color=ft.Colors.BLACK12,
         )
 
-        # 主布局
         self.page.add(
-            ft.Column(
-                controls=[
-                    # 状态栏
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Text(
-                                    self.APP_NAME,
-                                    size=20,
-                                    weight=ft.FontWeight.BOLD,
-                                    color=ft.Colors.WHITE,
-                                ),
-                                ft.Container(expand=True),
-                                ft.IconButton(
-                                    icon=ft.Icons.INFO_OUTLINE,
-                                    icon_color=ft.Colors.WHITE,
-                                    tooltip="关于",
-                                    on_click=self.show_about,
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        ),
-                        padding=ft.Padding(left=16, right=8, top=45, bottom=8),
-                        bgcolor=self.APP_COLOR,
-                    ),
+            ft.Column([
+                # 顶部状态栏（显示版本号）
+                ft.Container(
+                    content=ft.Row([
+                        ft.Column([
+                            ft.Text(self.APP_NAME, size=20, weight=ft.FontWeight.BOLD,
+                                    color=ft.Colors.WHITE),
+                            ft.Text("v2.0.0", size=11, color=ft.Colors.WHITE70),
+                        ]),
+                        ft.Container(expand=True),
+                        ft.IconButton(icon=ft.Icons.INFO_OUTLINE, icon_color=ft.Colors.WHITE,
+                            tooltip="关于", on_click=self.show_about),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.Padding(left=16, right=8, top=45, bottom=8),
+                    bgcolor=self.APP_COLOR,
+                ),
                     # 页面内容（可滚动）
                     ft.Container(
                         content=self.page_container,

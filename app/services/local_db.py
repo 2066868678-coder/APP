@@ -345,3 +345,23 @@ def get_stats():
         }
     finally:
         s.close()
+
+
+def get_all_words_with_status():
+    """返回所有单词及学习状态"""
+    s = _get_session()
+    try:
+        studied_ids = set(r[0] for r in s.query(StudyRecord.word_id).distinct().all())
+        words = s.query(Word).order_by(Word.chapter, Word.source_page, Word.id).all()
+        result = []
+        for w in words:
+            result.append({
+                'id': w.id, 'word': w.word, 'chapter': w.chapter,
+                'phonetic': w.phonetic,
+                'meaning': w.meaning[:60] if w.meaning else '',
+                'studied': w.id in studied_ids,
+                'source_page': w.source_page,
+            })
+        return {'words': result, 'total': len(result), 'studied': len(studied_ids)}
+    finally:
+        s.close()

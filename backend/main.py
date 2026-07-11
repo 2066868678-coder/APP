@@ -579,6 +579,24 @@ def get_study_history(days: int = Query(30, ge=7, le=365)):
         session.close()
 
 
+@app.get("/api/words/all-with-status")
+def get_all_words_with_status():
+    """返回全部单词及其学习状态"""
+    session = Session(engine)
+    try:
+        studied_ids = set(r[0] for r in session.query(StudyRecord.word_id).distinct().all())
+        words = session.query(Word).order_by(Word.chapter, Word.source_page, Word.id).all()
+        result = []
+        for w in words:
+            result.append({
+                'id': w.id, 'word': w.word, 'chapter': w.chapter,
+                'source_page': w.source_page, 'studied': w.id in studied_ids,
+            })
+        return JSONResponse(content={'words': result, 'total': len(result), 'studied': len(studied_ids)})
+    finally:
+        session.close()
+
+
 # ----- 数据导入/导出 -----
 
 @app.post("/api/admin/import-json")

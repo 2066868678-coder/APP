@@ -131,7 +131,8 @@ class StatisticsPage:
             overview, ft.Container(height=8),
             today_card, ft.Container(height=8),
             mastery, ft.Container(height=8),
-            badges, ft.Container(height=16),
+            badges, ft.Container(height=8),
+            self._build_word_list_btn(), ft.Container(height=16),
         ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
 
         self._container.content = content
@@ -143,6 +144,59 @@ class StatisticsPage:
                 ft.Text(label, size=11, color=ft.Colors.GREY),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
             expand=True, alignment=ft.alignment.Alignment.CENTER,
+        )
+
+    def _show_word_list(self, e):
+        from app.services import api_service
+        data = api_service.get_all_words_with_status()
+        if not data or not data.get('words'):
+            self.app.show_snackbar('加载失败')
+            return
+        words = data['words']
+        learned = [w for w in words if w['studied']]
+        unlearned = [w for w in words if not w['studied']]
+
+        def make_list(items, label):
+            if not items:
+                return ft.Text('暂无数据', color=ft.Colors.GREY, size=14)
+            cols = []
+            for w in items[:200]:
+                cols.append(
+                    ft.Row([
+                        ft.Container(width=6, height=6, bgcolor=ft.Colors.GREEN if w['studied'] else ft.Colors.GREY,
+                            border_radius=3, margin=ft.Margin(right=8, top=6, bottom=6, left=0)),
+                        ft.Text(w['word'], size=14, expand=2),
+                        ft.Text(w.get('meaning','')[:35], size=11, color=ft.Colors.GREY_600, expand=3),
+                    ], spacing=4))
+            return ft.Column(cols, spacing=1, scroll=ft.ScrollMode.AUTO, height=400)
+
+        dlg = ft.AlertDialog(
+            title=ft.Text(f'总单词列表 ({len(words)}词)'),
+            content=ft.Column([
+                ft.Tabs(selected_index=0, tabs=[
+                    ft.Tab(text=f'已学习 ({len(learned)})',
+                        content=ft.Container(make_list(learned, 'learned'), padding=10)),
+                    ft.Tab(text=f'未学习 ({len(unlearned)})',
+                        content=ft.Container(make_list(unlearned, 'unlearned'), padding=10)),
+                ], expand=True),
+            ], width=360, height=500),
+            actions=[ft.TextButton('关闭', on_click=lambda e: setattr(dlg, 'open', False) or self.page.update())],
+        )
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
+
+    def _build_word_list_btn(self):
+        return ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.LIST_ALT, color=ft.Colors.TEAL, size=20),
+                ft.Text('完整单词列表', size=16, weight=ft.FontWeight.BOLD, expand=True),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.GREY, size=20),
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
+            bgcolor=ft.Colors.WHITE, border_radius=12,
+            shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.BLACK12, offset=ft.Offset(0, 2)),
+            ink=True, on_click=self._show_word_list,
         )
 
     def _seg(self, label, pct, color):
