@@ -196,7 +196,6 @@ class HomePage:
                     width=40, height=40,
                     bgcolor=ft.Colors.with_opacity(0.10, color),
                     border_radius=20,
-                    alignment=ft.alignment.center,
                 ),
                 ft.Container(width=10),
                 ft.Column([
@@ -234,14 +233,12 @@ class HomePage:
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             spacing=0, tight=True),
                         width=72, height=72,
-                        alignment=ft.alignment.center,
                     ),
                 ], width=72, height=72),
                 ft.Container(height=4),
                 ft.Text(label, size=FONT_SM, color=TEXT_SECONDARY),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
             expand=True,
-            alignment=ft.alignment.center,
         )
 
     def _action_btn(self, label, icon, color, cb):
@@ -258,7 +255,6 @@ class HomePage:
                         weight=ft.FontWeight.W_500),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
             expand=True,
-            alignment=ft.alignment.center,
             ink=True,
             on_click=cb,
         )
