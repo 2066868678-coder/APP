@@ -90,9 +90,6 @@ class SettingsPage:
     def __init__(self, app):
         self.app = app
         self.page = app.page
-        # 文件选择器（用于下载Word文档）
-        self._file_picker = ft.FilePicker(on_result=self._on_save_result)
-        self._pending_docx_bytes = None
         self._target_value = ft.TextField(
             value=str(api_service.get_daily_target()),
             width=80, height=42,
@@ -120,10 +117,6 @@ class SettingsPage:
         )
 
     def build(self):
-        # 将文件选择器添加到页面
-        if self._file_picker not in self.page.overlay:
-            self.page.overlay.append(self._file_picker)
-
         # 加载学习日期
         dates = []
         try:
@@ -456,7 +449,7 @@ class SettingsPage:
         self._preview_container.update()
 
     def _do_download(self, selected):
-        """生成并下载Word文档"""
+        """生成并通过浏览器下载Word文档（手机/电脑通用）"""
         if not _DOCX_AVAILABLE:
             self.app.show_snackbar("缺少 python-docx 库，运行 pip install python-docx", ERROR)
             return
@@ -467,26 +460,14 @@ class SettingsPage:
                 return
 
             docx_bytes, total = _generate_docx(words_by_date)
-            self._pending_docx_bytes = docx_bytes
-            # 弹出保存对话框（手机浏览器触发下载）
-            self._file_picker.save_file(
-                file_name="学习记录.docx",
-                allowed_extensions=["docx"],
+            b64 = base64.b64encode(docx_bytes).decode()
+            # 用 data URI 触发浏览器下载（所有设备通用）
+            self.page.launch_url(
+                f"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}"
             )
-            self.app.show_snackbar(f"已生成 {total} 词，请选择保存位置")
+            self.app.show_snackbar(f"已生成 {total} 词，正在下载")
         except Exception as ex:
             self.app.show_snackbar(f"生成失败：{ex}", ERROR)
-
-    def _on_save_result(self, e: ft.FilePickerResultEvent):
-        """文件保存回调"""
-        if e.path and self._pending_docx_bytes:
-            try:
-                with open(e.path, 'wb') as f:
-                    f.write(self._pending_docx_bytes)
-                self.app.show_snackbar("Word 文档已保存")
-            except Exception as ex:
-                self.app.show_snackbar(f"保存失败：{ex}", ERROR)
-            self._pending_docx_bytes = None
 
     def _confirm_reset(self, e):
         dlg = ft.AlertDialog(
