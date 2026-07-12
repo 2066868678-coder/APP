@@ -79,19 +79,22 @@ class StudyPage:
                 self.remaining_queue = []
             self.total_new = target
             self.new_words_done = done
+            # 先建按钮（_show_current_word 中会引用）
+            self._build_action_buttons()
             self._show_current_word(initial=True)
         else:
             self.card_container.content = self._build_empty()
             self.progress_text.value = "今日: 0/0"
+            self._build_action_buttons()
 
         return ft.Column([
             header,
             ft.Container(content=self.card_container, expand=True),
-            self._build_action_buttons(),
+            self.action_buttons,
         ], spacing=0, tight=True)
 
     def _build_action_buttons(self):
-        """操作按钮区域"""
+        """操作按钮区域（需在 _show_current_word 之前调用）"""
         self.action_buttons = ft.Container(
             content=ft.Row([
                 ft.Container(
