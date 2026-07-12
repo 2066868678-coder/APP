@@ -56,7 +56,7 @@ class StudyPage:
             total = 2281
             learned = 0
         remain = max(0, total - learned)
-        cur_target = max(1, target or api_service.get_daily_target())
+        cur_target = max(1, api_service.get_daily_target())  # 实时读取设置
         if remain > 0:
             est_days = (remain + cur_target - 1) // cur_target
             self.est_text.value = f"剩余{remain}词 · 每日{cur_target}词还需{est_days}天"
