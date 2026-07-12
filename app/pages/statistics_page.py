@@ -234,7 +234,7 @@ class StatisticsPage:
                         text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
             expand=True,
-            alignment=ft.alignment.CENTER,
+            alignment=ft.alignment.center,
         )
 
     def _stacked_bar(self, unlearned, learning, mastered, total):
@@ -278,7 +278,7 @@ class StatisticsPage:
                 ft.Container(
                     content=ft.Text(emoji, size=24, text_align=ft.TextAlign.CENTER),
                     width=44, height=44,
-                    alignment=ft.alignment.CENTER,
+                    alignment=ft.alignment.center,
                     bgcolor=ft.Colors.with_opacity(0.15 if unlocked else 0.05, color),
                     border_radius=22,
                 ),

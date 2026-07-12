@@ -151,6 +151,6 @@ def icon_bg_circle(color: str, size: int = 44) -> ft.Container:
             height=size,
             bgcolor=ft.Colors.with_opacity(0.12, color),
             border_radius=size // 2,
-            alignment=ft.alignment.CENTER,
+            alignment=ft.alignment.center,
         ),
     )
