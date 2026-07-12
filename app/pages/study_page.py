@@ -1,24 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-单词突围 - 学习页面（翻卡模式）
+单词突围 - 学习页面（翻卡模式 · 全新设计）
 ===============================
 标准背单词流程：
 1. 展示英文单词（正面）
 2. 用户回想意思
-3. 点击翻转显示完整信息（来自书本的释义、例句、记忆法、搭配）
+3. 点击翻转显示完整信息
 4. 自评"记得"或"不记得"
-5. 记得 → 按艾宾浩斯进入下一复习间隔
-6. 不记得 → 留在今日任务，稍后重排出现
-
-数据来源：后端API（真实书本数据）
 """
 
 import sys, os, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-import threading
 import flet as ft
+from app.theme import (
+    PRIMARY, PRIMARY_LIGHT, PRIMARY_DARK, PRIMARY_CONTAINER,
+    SECONDARY, BACKGROUND, SURFACE, SUCCESS, ERROR,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT,
+    PAGE_PADDING, CARD_GAP, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL,
+    RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_XL,
+    SHADOW_SM, SHADOW_MD, SHADOW_LG,
+    FONT_SM, FONT_BODY, FONT_LG, FONT_XL, FONT_XXL, FONT_XXXL, FONT_DISPLAY,
+)
+from app.components.app_card import AppCard
 from app.services import api_service
 
 
@@ -35,42 +40,39 @@ class StudyPage:
         self.total_new = 0
         self.flipped = False
 
-        self.progress_text = ft.Text("加载中...", size=14, color=ft.Colors.GREY)
+        self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
         self.card_container = ft.Container(expand=True)
-        self.action_buttons = ft.Container(visible=False)
 
     def build(self):
-        # 先加载数据
         words, target, done = self._load_data()
 
         header = ft.Container(
-            content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.MENU_BOOK, color=ft.Colors.GREEN, size=22),
-                        ft.Text("学习新词", size=18, weight=ft.FontWeight.BOLD)]),
-                ft.Container(height=4),
-                self.progress_text,
-            ], spacing=0),
-            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
-        )
-
-        self.action_buttons = ft.Container(
             content=ft.Row([
-                ft.ElevatedButton("忘记", icon=ft.Icons.CLOSE, color=ft.Colors.RED,
-                    bgcolor=ft.Colors.RED_50,
-                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
-                    on_click=lambda e: self._handle_result('forget')),
-                ft.Container(width=20),
-                ft.ElevatedButton("记得", icon=ft.Icons.CHECK, color=ft.Colors.GREEN,
-                    bgcolor=ft.Colors.GREEN_50,
-                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
-                    on_click=lambda e: self._handle_result('remember')),
-            ], alignment=ft.MainAxisAlignment.CENTER),
-            padding=ft.Padding(left=16, right=16, bottom=24),
-            visible=False,
+                ft.Container(
+                    content=ft.Icon(ft.Icons.MENU_BOOK, color=PRIMARY, size=20),
+                    padding=ft.Padding(8, 8, 8, 8),
+                    bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                    border_radius=10,
+                ),
+                ft.Container(width=10),
+                ft.Column([
+                    ft.Text("学习新词", size=FONT_LG, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY),
+                    self.progress_text,
+                ], spacing=2, expand=True),
+                ft.Container(
+                    content=ft.Text(f"{done}/{max(target, len(words))}",
+                                    size=13, weight=ft.FontWeight.BOLD, color=PRIMARY),
+                    padding=ft.Padding(10, 6, 10, 6),
+                    bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                    border_radius=20,
+                ),
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
+                               right=PAGE_PADDING, bottom=SPACING_SM),
         )
 
         if words:
-            # 如果是新加载的词（不是保留的已有队列），重置进度
             if not self.words or words != self.words:
                 self.words = words
                 self.word_index = 0
@@ -79,44 +81,82 @@ class StudyPage:
             self.new_words_done = done
             self._show_current_word(initial=True)
         else:
-            self.card_container.content = ft.Container(
-                content=ft.Column([
-                    ft.Container(expand=True),
-                    ft.Icon(ft.Icons.MENU_BOOK_OUTLINED, size=64, color=ft.Colors.GREY_300),
-                    ft.Text("暂无新词可学\n请先在设置中查看每日目标", size=16, color=ft.Colors.GREY,
-                            text_align=ft.TextAlign.CENTER),
-                    ft.Container(height=12),
-                    ft.ElevatedButton("去设置", icon=ft.Icons.SETTINGS,
-                        on_click=lambda e: self.app.switch_to_page(4)),
-                    ft.Container(expand=True),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER), expand=True,
-            )
+            self.card_container.content = self._build_empty()
             self.progress_text.value = "今日: 0/0"
 
-        return ft.Column([header, ft.Container(content=self.card_container, expand=True),
-                          self.action_buttons], spacing=0, tight=True)
+        return ft.Column([
+            header,
+            ft.Container(content=self.card_container, expand=True),
+            self._build_action_buttons(),
+        ], spacing=0, tight=True)
+
+    def _build_action_buttons(self):
+        """操作按钮区域"""
+        self.action_buttons = ft.Container(
+            content=ft.Row([
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.CLOSE, color=ft.Colors.WHITE, size=22),
+                        ft.Text("忘记", color=ft.Colors.WHITE, size=14,
+                                weight=ft.FontWeight.BOLD),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                    padding=ft.Padding(36, 14, 36, 14),
+                    bgcolor=ERROR,
+                    border_radius=RADIUS_LG,
+                    ink=True,
+                    shadow=SHADOW_SM,
+                    on_click=lambda e: self._handle_result('forget'),
+                ),
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.CHECK, color=ft.Colors.WHITE, size=22),
+                        ft.Text("记得", color=ft.Colors.WHITE, size=14,
+                                weight=ft.FontWeight.BOLD),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                    padding=ft.Padding(36, 14, 36, 14),
+                    bgcolor=SUCCESS,
+                    border_radius=RADIUS_LG,
+                    ink=True,
+                    shadow=SHADOW_SM,
+                    on_click=lambda e: self._handle_result('remember'),
+                ),
+            ], alignment=ft.MainAxisAlignment.CENTER, spacing=24),
+            padding=ft.Padding(left=PAGE_PADDING, right=PAGE_PADDING, bottom=24),
+            visible=False,
+        )
+        return self.action_buttons
 
     def _build_empty(self, msg="🎉 今日新词已学完！"):
         return ft.Container(
             content=ft.Column([
                 ft.Container(expand=True),
-                ft.Icon(ft.Icons.CELEBRATION, size=64, color=ft.Colors.GREEN),
+                ft.Container(
+                    content=ft.Icon(ft.Icons.CELEBRATION, size=64, color=PRIMARY),
+                    padding=ft.Padding(20, 20, 20, 20),
+                    bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                    border_radius=40,
+                ),
                 ft.Container(height=16),
-                ft.Text(msg, size=16, color=ft.Colors.GREY, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=20),
-                ft.ElevatedButton("返回首页", icon=ft.Icons.HOME,
-                    on_click=lambda e: self.app.switch_to_page(0)),
+                ft.Text(msg, size=FONT_LG, color=TEXT_SECONDARY,
+                        text_align=ft.TextAlign.CENTER),
+                ft.Container(height=24),
+                ft.Container(
+                    content=ft.Text("返回首页", color=ft.Colors.WHITE, size=14,
+                                   weight=ft.FontWeight.BOLD),
+                    padding=ft.Padding(28, 12, 28, 12),
+                    bgcolor=PRIMARY,
+                    border_radius=RADIUS_XL,
+                    ink=True,
+                    on_click=lambda e: self.app.switch_to_page(0),
+                ),
                 ft.Container(expand=True),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             expand=True,
         )
 
     def _load_data(self):
-        """返回 (words, target, done)，保留未学完的词队列"""
-        # 如果已有词队列且没学完，继续用（切换页面回来时）
         if self.words and self.word_index < len(self.words):
             return self.words, self.total_new or 20, self.new_words_done
-
         try:
             plan = api_service.get_today_plan()
             today_words = api_service.get_today_words()
@@ -142,38 +182,53 @@ class StudyPage:
         wd = self._get_word()
         if not wd:
             self.card_container.content = self._build_empty()
-            self.action_buttons.visible = False
+            if hasattr(self, 'action_buttons') and self.action_buttons:
+                self.action_buttons.visible = False
             if not initial:
                 self.page.update()
             return
 
         self.flipped = False
-        # 正面：只显示英文单词
+
+        # === 卡片正面 ===
         front = ft.Container(
             content=ft.Column([
+                # 顶部装饰色条
+                ft.Container(height=4, bgcolor=PRIMARY,
+                             border_radius=ft.BorderRadius(top_left=20, top_right=20, bottom_left=0, bottom_right=0)),
                 ft.Container(expand=True),
-                ft.Text(wd['word'], size=40, weight=ft.FontWeight.BOLD,
-                        color=ft.Colors.BLACK87, text_align=ft.TextAlign.CENTER),
+                ft.Text(wd['word'], size=FONT_DISPLAY, weight=ft.FontWeight.BOLD,
+                        color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=12),
-                ft.Text(wd.get('phonetic', ''), size=16, color=ft.Colors.GREY, italic=True,
-                        text_align=ft.TextAlign.CENTER),
+                # 音标胶囊
+                ft.Container(
+                    content=ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
+                                    color=TEXT_SECONDARY, italic=True,
+                                    text_align=ft.TextAlign.CENTER),
+                    padding=ft.Padding(16, 6, 16, 6),
+                    bgcolor=ft.Colors.with_opacity(0.06, PRIMARY),
+                    border_radius=20,
+                ),
                 ft.Container(height=30),
-                ft.Text("👆 点击查看详情", size=13, color=ft.Colors.GREY_400,
-                        text_align=ft.TextAlign.CENTER),
+                ft.Row([
+                    ft.Icon(ft.Icons.TOUCH_APP, size=14, color=TEXT_HINT),
+                    ft.Container(width=4),
+                    ft.Text("点击翻转查看详情", size=13, color=TEXT_HINT),
+                ], alignment=ft.MainAxisAlignment.CENTER),
                 ft.Container(expand=True),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
-            padding=ft.Padding(left=30, top=30, right=30, bottom=30),
+            padding=ft.Padding(left=24, top=0, right=24, bottom=24),
+            bgcolor=SURFACE,
+            border_radius=RADIUS_LG,
+            shadow=SHADOW_LG,
+            margin=ft.Margin(left=20, right=20, top=12, bottom=12),
+            ink=True,
+            on_click=self._flip_card,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
 
-        card = ft.Container(
-            content=front, bgcolor=ft.Colors.WHITE, border_radius=20,
-            shadow=ft.BoxShadow(blur_radius=12, color=ft.Colors.BLACK12, offset=ft.Offset(0, 6)),
-            margin=ft.Margin(left=24, right=24, top=16, bottom=16),
-            ink=True, on_click=self._flip_card,
-        )
-
+        self.card_container.content = ft.Column([front], spacing=0, tight=True)
         self.action_buttons.visible = False
-        self.card_container.content = ft.Column([card], spacing=0, tight=True)
         self._update_progress(initial=initial)
         if not initial:
             self.page.update()
@@ -187,64 +242,108 @@ class StudyPage:
             return
 
         sections = []
-        # 基本信息
-        sections.append(ft.Container(
-            content=ft.Column([
-                ft.Text(wd['word'], size=26, weight=ft.FontWeight.BOLD),
-                ft.Row([
-                    ft.Text(wd.get('phonetic', ''), size=14, color=ft.Colors.GREY, italic=True),
-                    ft.Container(width=8),
-                    ft.Container(content=ft.Text(wd.get('pos', ''), size=12, color=ft.Colors.WHITE),
-                        padding=ft.Padding(left=8, right=8, top=2, bottom=2),
-                        bgcolor=ft.Colors.GREEN, border_radius=4,
-                    ) if wd.get('pos') else ft.Container(),
-                ], spacing=4),
-                ft.Container(height=6),
-                ft.Text(wd.get('meaning', ''), size=18, weight=ft.FontWeight.W_500,
-                        color=ft.Colors.BLACK87),
-            ], spacing=4),
-            padding=ft.Padding(left=12, top=12, right=12, bottom=12), bgcolor=ft.Colors.INDIGO_50, border_radius=8,
-        ))
 
-        # 直接从书本提取的例句
+        # === 基本信息区 ===
+        sections.append(self._section_basic(wd))
+
+        # === 例句 ===
         if wd.get('examples'):
-            sections.append(self._sec("📖 例句", wd['examples'], None, None))
-        # 记忆方法（重点高亮）
-        if wd.get('memory_methods'):
-            sections.append(self._sec("💡 记忆方法", wd['memory_methods'],
-                                      ft.Colors.AMBER_50, ft.Colors.AMBER_200))
-        # 固定搭配
-        if wd.get('collocations'):
-            sections.append(self._sec("📝 固定搭配", wd['collocations'], None, None))
-        # 派生词/扩展
-        if wd.get('extensions'):
-            sections.append(self._sec("🔗 派生词/扩展", wd['extensions'], None, None))
+            sections.append(self._section_info(
+                "例句", ft.Icons.FORMAT_QUOTE, wd['examples'],
+                "#F3E5F5", "#CE93D8",
+            ))
 
+        # === 记忆方法（高亮） ===
+        if wd.get('memory_methods'):
+            sections.append(self._section_info(
+                "记忆方法", ft.Icons.LIGHTBULB_OUTLINE, wd['memory_methods'],
+                "#FFF8E1", "#FFB300",
+            ))
+
+        # === 固定搭配 ===
+        if wd.get('collocations'):
+            sections.append(self._section_info(
+                "固定搭配", ft.Icons.LINK, wd['collocations'],
+                "#E3F2FD", "#64B5F6",
+            ))
+
+        # === 派生词/扩展 ===
+        if wd.get('extensions'):
+            sections.append(self._section_info(
+                "派生词/扩展", ft.Icons.ACCOUNT_TREE_OUTLINED, wd['extensions'],
+                "#F1F8E9", "#81C784",
+            ))
+
+        # === 卡片背面 ===
         back = ft.Container(
-            content=ft.Column(sections, spacing=6, scroll=ft.ScrollMode.AUTO),
-            padding=ft.Padding(left=12, top=12, right=12, bottom=12),
+            content=ft.Column(sections, spacing=8, scroll=ft.ScrollMode.AUTO),
+            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
+            bgcolor=SURFACE,
+            border_radius=RADIUS_LG,
+            shadow=SHADOW_LG,
+            margin=ft.Margin(left=16, right=16, top=12, bottom=12),
         )
-        # 重新组装卡片
-        card = ft.Container(
-            content=back, bgcolor=ft.Colors.WHITE, border_radius=20,
-            shadow=ft.BoxShadow(blur_radius=12, color=ft.Colors.BLACK12, offset=ft.Offset(0, 6)),
-            margin=ft.Margin(left=24, right=24, top=16, bottom=16),
-        )
+
         self.action_buttons.visible = True
-        self.card_container.content = ft.Column([card], spacing=0, tight=True)
+        self.card_container.content = ft.Column([back], spacing=0, tight=True)
         self.page.update()
 
-    def _sec(self, title, content, bg, border):
+    def _section_basic(self, wd):
+        """基本信息区 — 单词/音标/词性/释义"""
         return ft.Container(
             content=ft.Column([
-                ft.Row([ft.Text(title, size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_800)]),
+                ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
+                        color=TEXT_PRIMARY),
                 ft.Container(height=4),
-                ft.Text(content, size=14, color=ft.Colors.BLACK87),
+                ft.Row([
+                    ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
+                            color=TEXT_SECONDARY, italic=True),
+                    ft.Container(width=8),
+                    ft.Container(
+                        content=ft.Text(wd.get('pos', ''), size=FONT_SM,
+                                        color=ft.Colors.WHITE),
+                        padding=ft.Padding(8, 3, 8, 3),
+                        bgcolor=PRIMARY,
+                        border_radius=4,
+                    ) if wd.get('pos') else ft.Container(),
+                ], spacing=4),
+                ft.Container(height=8),
+                ft.Text(wd.get('meaning', ''), size=FONT_XL, weight=ft.FontWeight.W_500,
+                        color=TEXT_PRIMARY),
             ], spacing=0),
-            padding=ft.Padding(left=10, top=10, right=10, bottom=10),
-            bgcolor=bg or ft.Colors.GREY_50,
-            border_radius=8,
-            border=ft.Border(left=ft.BorderSide(1, border), right=ft.BorderSide(1, border), top=ft.BorderSide(1, border), bottom=ft.BorderSide(1, border)) if border else None,
+            padding=ft.Padding(left=12, top=12, right=12, bottom=12),
+            bgcolor=ft.Colors.with_opacity(0.06, PRIMARY),
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(3, PRIMARY),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
+        )
+
+    def _section_info(self, title, icon, content, bg_color, accent_color):
+        """信息区 — 带左边缘色条"""
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(icon, size=16, color=accent_color),
+                    ft.Container(width=6),
+                    ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY),
+                ], spacing=0),
+                ft.Container(height=6),
+                ft.Text(content, size=FONT_BODY, color=TEXT_SECONDARY),
+            ], spacing=0),
+            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+            bgcolor=bg_color,
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(3, accent_color),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
         )
 
     def _handle_result(self, result):
@@ -263,7 +362,7 @@ class StudyPage:
             if word_id not in self.remaining_queue:
                 self.remaining_queue.append(word_id)
             self._next_word()
-            self.app.show_snackbar("💪 会再出现的！今天多练几次", ft.Colors.ORANGE)
+            self.app.show_snackbar("💪 会再出现的！今天多练几次", ERROR)
 
     def _next_word(self):
         self.word_index += 1
@@ -275,7 +374,6 @@ class StudyPage:
             self._show_current_word()
 
     def _reshuffle(self):
-        """忘记的词再次插入队列"""
         forgot = list(set(self.remaining_queue))
         forgot_words = [w for w in self.words if w.get('id') in forgot]
         rest = [w for w in self.words[self.word_index:] if w.get('id') not in forgot]
@@ -297,26 +395,40 @@ class StudyPage:
             self.progress_text.update()
 
     def _show_completion(self):
+        self.action_buttons.visible = False
         self.card_container.content = ft.Column([
             ft.Container(expand=True),
             ft.Container(
                 content=ft.Column([
-                    ft.Icon(ft.Icons.CELEBRATION, size=64, color=ft.Colors.GREEN),
-                    ft.Container(height=16),
-                    ft.Text("🎉 今日新词学完了！", size=24, weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.GREEN),
-                    ft.Container(height=8),
-                    ft.Text(f"今日新学: {self.new_words_done} 个单词", size=16, color=ft.Colors.BLACK87),
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.CELEBRATION, size=72, color=PRIMARY),
+                        padding=ft.Padding(20, 20, 20, 20),
+                        bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                        border_radius=40,
+                    ),
                     ft.Container(height=20),
-                    ft.ElevatedButton("返回首页", icon=ft.Icons.HOME,
-                        on_click=lambda e: self.app.switch_to_page(0)),
+                    ft.Text("太棒了！", size=FONT_XXL, weight=ft.FontWeight.BOLD,
+                            color=PRIMARY),
                     ft.Container(height=8),
-                    ft.ElevatedButton("去复习", icon=ft.Icons.AUTO_STORIES,
-                        on_click=lambda e: self.app.switch_to_page(2)),
+                    ft.Text(f"今日新学 {self.new_words_done} 个单词",
+                            size=FONT_BODY, color=TEXT_SECONDARY),
+                    ft.Container(height=24),
+                    ft.Container(
+                        content=ft.Text("返回首页", color=ft.Colors.WHITE,
+                                        size=14, weight=ft.FontWeight.BOLD),
+                        padding=ft.Padding(28, 12, 28, 12),
+                        bgcolor=PRIMARY,
+                        border_radius=RADIUS_XL,
+                        ink=True,
+                        on_click=lambda e: self.app.switch_to_page(0),
+                    ),
+                    ft.Container(height=8),
+                    ft.TextButton("去复习",
+                                  style=ft.ButtonStyle(color=PRIMARY),
+                                  on_click=lambda e: self.app.switch_to_page(2)),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             ),
             ft.Container(expand=True),
         ])
-        self.action_buttons.visible = False
         self.progress_text.value = f"今日新词: {self.new_words_done}/{self.new_words_done} ✅"
         self.page.update()

@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-单词突围 - 设置页面
+单词突围 - 设置页面（全新设计）
 ==================
-系统设置：每日目标、数据导出、重置、关于
 """
 
 import sys, os, json, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import flet as ft
+from app.theme import (
+    PRIMARY, PRIMARY_LIGHT, SECONDARY, SURFACE, SUCCESS, ERROR, BACKGROUND,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, TEXT_ON_PRIMARY,
+    PAGE_PADDING, CARD_GAP, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL,
+    RADIUS_MD, RADIUS_SM, RADIUS_XL,
+    SHADOW_SM, SHADOW_MD,
+    FONT_XS, FONT_SM, FONT_BODY, FONT_LG,
+)
+from app.components.app_card import AppCard
 from app.services import api_service, local_db
 from backend.models import StudyRecord, DailyPlan
 
 
 def _clear_study_records():
-    """清空学习记录"""
     s = local_db._get_session()
     try:
         s.query(StudyRecord).delete()
@@ -30,7 +37,6 @@ def _clear_study_records():
 
 
 def _export_words():
-    """导出单词到文件"""
     data = api_service.get_words(page=1, page_size=3000)
     if not data or not data.get('words'):
         return None, 0
@@ -48,141 +54,217 @@ class SettingsPage:
     def __init__(self, app):
         self.app = app
         self.page = app.page
-        # 每日目标相关状态
         self._target_value = ft.TextField(
             value=str(api_service.get_daily_target()),
             width=80,
             height=42,
-            text_size=16,
+            text_size=FONT_LG,
             text_align=ft.TextAlign.CENTER,
             keyboard_type=ft.KeyboardType.NUMBER,
             border=ft.InputBorder.OUTLINE,
-            border_color=ft.Colors.GREEN,
+            border_color=PRIMARY,
             content_padding=ft.Padding(left=8, right=8, top=6, bottom=6),
         )
 
     def build(self):
-        # 每日学习目标
-        daily = ft.Container(
-            content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.TRACK_CHANGES, color=ft.Colors.GREEN, size=20),
-                        ft.Text("每日学习目标", size=16, weight=ft.FontWeight.BOLD)]),
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                ft.Container(height=12),
-                ft.Row([
-                    ft.Text("每天新学单词", size=14, color=ft.Colors.GREY_700),
-                    ft.Container(expand=True),
-                    self._target_value,
-                ]),
-                ft.Row([
-                    ft.Container(expand=True),
-                    ft.ElevatedButton(
-                        "保存目标",
-                        icon=ft.Icons.SAVE,
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.GREEN,
-                            color=ft.Colors.WHITE,
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                        ),
-                        on_click=self._save_target,
-                    ),
-                ]),
-                ft.Container(height=4),
-                ft.Text("建议：每天10-20个，有基础可30-50个",
-                        size=12, color=ft.Colors.GREY_400, italic=True),
-            ], spacing=0),
-            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
-            bgcolor=ft.Colors.WHITE, border_radius=12,
-        )
-
-        # 数据管理
-        data_mgmt = ft.Container(
-            content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.STORAGE, color=ft.Colors.ORANGE, size=20),
-                        ft.Text("数据管理", size=16, weight=ft.FontWeight.BOLD)]),
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                ft.Container(height=12),
-                ft.ElevatedButton("导出单词到 words_export.json", icon=ft.Icons.DOWNLOAD,
-                    on_click=self._export_data, width=280),
-                ft.Container(height=8),
-                ft.ElevatedButton("重置学习记录", icon=ft.Icons.DELETE_SWEEP,
-                    color=ft.Colors.RED, on_click=self._confirm_reset, width=280),
-            ], spacing=0),
-            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
-            bgcolor=ft.Colors.WHITE, border_radius=12,
-        )
-
-        # 启动帮助
-        launch_help = ft.Container(
-            content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.PLAY_CIRCLE_OUTLINE, color=ft.Colors.BLUE, size=20),
-                        ft.Text("下次如何打开", size=16, weight=ft.FontWeight.BOLD)]),
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                ft.Container(height=8),
-                ft.Text("在项目目录双击 start.bat 即可启动", size=14, color=ft.Colors.BLACK87),
-                ft.Container(height=4),
-                ft.Text("或手动运行:", size=13, color=ft.Colors.GREY_600),
-                ft.Container(
-                    content=ft.Text("cd E:\\APP\npython run_app.py", size=13,
-                                    color=ft.Colors.BLUE_700, font_family="monospace"),
-                    padding=ft.Padding(left=8, top=6, right=8, bottom=6),
-                    bgcolor=ft.Colors.BLUE_50, border_radius=6,
-                ),
-                ft.Container(height=4),
-                ft.Text("浏览器打开 http://localhost:8551", size=13, color=ft.Colors.GREY_600),
-            ], spacing=0),
-            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
-            bgcolor=ft.Colors.WHITE, border_radius=12,
-        )
-
-        # 关于
-        about = ft.Container(
-            content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.INFO, color=ft.Colors.GREY, size=20),
-                        ft.Text("关于", size=16, weight=ft.FontWeight.BOLD)]),
-                ft.Divider(height=1, color=ft.Colors.GREY_300),
-                ft.Container(height=8),
-                self._row("应用", "单词突围 (独立版)"),
-                self._row("版本", "2.0.0"),
-                self._row("数据来源", "《单词突围5200》上册"),
-                self._row("复习算法", "艾宾浩斯遗忘曲线"),
-                self._row("单词总数", "2281 个"),
-                self._row("运行模式", "本地数据库 (无需后端)"),
-            ], spacing=0),
-            padding=ft.Padding(left=16, top=16, right=16, bottom=16),
-            bgcolor=ft.Colors.WHITE, border_radius=12,
-        )
-
         return ft.ListView([
-            daily, ft.Container(height=8),
-            data_mgmt, ft.Container(height=8),
-            launch_help, ft.Container(height=8),
-            about, ft.Container(height=16),
-        ], padding=ft.Padding(left=16, top=16, right=16, bottom=16), spacing=0)
+            # === 每日学习目标 ===
+            AppCard(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.TRACK_CHANGES,
+                                            color=PRIMARY, size=18),
+                            padding=ft.Padding(6, 6, 6, 6),
+                            bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                            border_radius=8,
+                        ),
+                        ft.Container(width=8),
+                        ft.Text("每日学习目标", size=FONT_LG,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                    ]),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
+                    ft.Container(height=SPACING_MD),
+                    ft.Row([
+                        ft.Text("每天新学单词", size=FONT_BODY, color=TEXT_SECONDARY),
+                        ft.Container(expand=True),
+                        self._target_value,
+                    ]),
+                    ft.Container(height=SPACING_MD),
+                    ft.Row([
+                        ft.Container(expand=True),
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.SAVE, color=ft.Colors.WHITE, size=16),
+                                ft.Container(width=4),
+                                ft.Text("保存目标", color=ft.Colors.WHITE,
+                                        size=14, weight=ft.FontWeight.BOLD),
+                            ]),
+                            padding=ft.Padding(20, 10, 20, 10),
+                            bgcolor=PRIMARY,
+                            border_radius=RADIUS_MD,
+                            ink=True,
+                            on_click=self._save_target,
+                        ),
+                    ]),
+                    ft.Container(height=4),
+                    ft.Text("建议：每天10-20个，有基础可30-50个",
+                            size=FONT_SM, color=TEXT_HINT, italic=True),
+                ], spacing=0),
+                elevation="sm",
+            ),
 
-    def _row(self, label, value):
-        return ft.Row([
-            ft.Text(label, size=14, color=ft.Colors.GREY_700),
-            ft.Container(expand=True),
-            ft.Text(value, size=14, color=ft.Colors.BLACK87),
-        ])
+            ft.Container(height=CARD_GAP),
+
+            # === 数据管理 ===
+            AppCard(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.STORAGE,
+                                            color="#FF8F00", size=18),
+                            padding=ft.Padding(6, 6, 6, 6),
+                            bgcolor=ft.Colors.with_opacity(0.10, "#FF8F00"),
+                            border_radius=8,
+                        ),
+                        ft.Container(width=8),
+                        ft.Text("数据管理", size=FONT_LG,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                    ]),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
+                    ft.Container(height=SPACING_MD),
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.DOWNLOAD, color=PRIMARY, size=18),
+                            ft.Container(width=8),
+                            ft.Text("导出单词到 JSON", size=FONT_BODY,
+                                    color=TEXT_PRIMARY, expand=True),
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_HINT, size=18),
+                        ]),
+                        padding=ft.Padding(12, 10, 12, 10),
+                        bgcolor=ft.Colors.with_opacity(0.04, PRIMARY),
+                        border_radius=RADIUS_SM,
+                        ink=True,
+                        on_click=self._export_data,
+                    ),
+                    ft.Container(height=8),
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.DELETE_SWEEP, color=ERROR, size=18),
+                            ft.Container(width=8),
+                            ft.Text("重置学习记录", size=FONT_BODY,
+                                    color=ERROR, expand=True),
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_HINT, size=18),
+                        ]),
+                        padding=ft.Padding(12, 10, 12, 10),
+                        bgcolor=ft.Colors.with_opacity(0.04, ERROR),
+                        border_radius=RADIUS_SM,
+                        ink=True,
+                        on_click=self._confirm_reset,
+                    ),
+                ], spacing=0),
+                elevation="sm",
+            ),
+
+            ft.Container(height=CARD_GAP),
+
+            # === 启动帮助 ===
+            AppCard(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.PLAY_CIRCLE_OUTLINE,
+                                            color=SECONDARY, size=18),
+                            padding=ft.Padding(6, 6, 6, 6),
+                            bgcolor=ft.Colors.with_opacity(0.10, SECONDARY),
+                            border_radius=8,
+                        ),
+                        ft.Container(width=8),
+                        ft.Text("下次如何打开", size=FONT_LG,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                    ]),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
+                    ft.Container(height=8),
+                    ft.Text("双击 start.bat 或在终端运行：", size=FONT_SM, color=TEXT_SECONDARY),
+                    ft.Container(height=4),
+                    ft.Container(
+                        content=ft.Text("cd E:\\APP\npython run_app.py",
+                                        size=13, color=PRIMARY, font_family="monospace"),
+                        padding=ft.Padding(left=12, top=8, right=12, bottom=8),
+                        bgcolor=ft.Colors.with_opacity(0.06, PRIMARY),
+                        border_radius=RADIUS_SM,
+                    ),
+                    ft.Container(height=8),
+                    ft.Text("浏览器打开 http://localhost:8551", size=FONT_SM, color=TEXT_SECONDARY),
+                ], spacing=0),
+                elevation="sm",
+            ),
+
+            ft.Container(height=CARD_GAP),
+
+            # === 关于 ===
+            AppCard(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.INFO,
+                                            color=TEXT_HINT, size=18),
+                            padding=ft.Padding(6, 6, 6, 6),
+                            bgcolor=ft.Colors.with_opacity(0.06, TEXT_HINT),
+                            border_radius=8,
+                        ),
+                        ft.Container(width=8),
+                        ft.Text("关于", size=FONT_LG,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                    ]),
+                    ft.Divider(height=1, color=ft.Colors.GREY_200),
+                    ft.Container(height=8),
+                    self._info_row("应用", "单词突围 (独立版)"),
+                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    self._info_row("版本", "2.0.0"),
+                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    self._info_row("数据来源", "《单词突围5200》上册"),
+                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    self._info_row("复习算法", "艾宾浩斯遗忘曲线"),
+                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    self._info_row("单词总数", "2281 个"),
+                    ft.Divider(height=1, color=ft.Colors.GREY_100),
+                    self._info_row("运行模式", "本地数据库 (无需后端)"),
+                ], spacing=0),
+                elevation="sm",
+            ),
+
+            ft.Container(height=SPACING_LG),
+        ], padding=ft.Padding(left=PAGE_PADDING, top=PAGE_PADDING,
+                               right=PAGE_PADDING, bottom=0), spacing=0)
+
+    def _info_row(self, label, value):
+        return ft.Container(
+            content=ft.Row([
+                ft.Text(label, size=FONT_BODY, color=TEXT_SECONDARY),
+                ft.Container(expand=True),
+                ft.Text(value, size=FONT_BODY, color=TEXT_PRIMARY,
+                        weight=ft.FontWeight.W_500),
+            ]),
+            padding=ft.Padding(left=4, top=10, right=4, bottom=10),
+        )
 
     def _save_target(self, e):
         try:
             val = int(self._target_value.value)
             if val < 1:
-                self.app.show_snackbar("每日目标至少为1", ft.Colors.ORANGE)
+                self.app.show_snackbar("每日目标至少为1", ERROR)
                 return
             if val > 200:
-                self.app.show_snackbar("目标太高了，建议不超过50", ft.Colors.ORANGE)
+                self.app.show_snackbar("目标太高了，建议不超过50", ERROR)
                 return
             ok = api_service.set_daily_target(val)
             if ok:
                 self.app.show_snackbar(f"每日新词目标已设为 {val} 个")
             else:
-                self.app.show_snackbar("保存失败", ft.Colors.RED)
+                self.app.show_snackbar("保存失败", ERROR)
         except ValueError:
-            self.app.show_snackbar("请输入有效数字", ft.Colors.ORANGE)
+            self.app.show_snackbar("请输入有效数字", ERROR)
 
     def _export_data(self, e):
         path, count = _export_words()
@@ -196,9 +278,10 @@ class SettingsPage:
             title=ft.Text("确认重置"),
             content=ft.Text("确定要清除所有学习记录吗？单词数据不会丢失。"),
             actions=[
-                ft.TextButton("取消", on_click=lambda e: self.app.close_dialog(dlg)),
+                ft.TextButton("取消",
+                    on_click=lambda e: self.app.close_dialog(dlg)),
                 ft.TextButton("确定重置",
-                    style=ft.ButtonStyle(color=ft.Colors.RED),
+                    style=ft.ButtonStyle(color=ERROR),
                     on_click=lambda e: self._do_reset(dlg)),
             ],
         )

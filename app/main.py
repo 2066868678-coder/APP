@@ -16,6 +16,13 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import flet as ft
+from app.theme import (
+    PRIMARY, PRIMARY_DARK, BACKGROUND, SURFACE,
+    TEXT_ON_PRIMARY, HEADER_HEIGHT, HEADER_PADDING_TOP,
+    NAV_BAR_HEIGHT, PAGE_PADDING, RADIUS_MD, RADIUS_XL, SHADOW_LG,
+    FONT_BODY,
+    make_theme,
+)
 from app.pages.home_page import HomePage
 from app.pages.study_page import StudyPage
 from app.pages.review_page import ReviewPage
@@ -27,8 +34,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    APP_COLOR = "#4CAF50"  # 主色调：绿色
-    BG_COLOR = "#F5F5F5"   # 背景色：浅灰
+    VERSION = "2.0.0"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -50,19 +56,9 @@ class WordBreakthroughApp:
     def setup_page(self):
         """设置页面属性"""
         self.page.title = self.APP_NAME
-        self.page.theme = ft.Theme(
-            color_scheme=ft.ColorScheme(
-                primary=ft.Colors.GREEN,
-                primary_container=ft.Colors.GREEN_100,
-                secondary=ft.Colors.BLUE,
-                secondary_container=ft.Colors.BLUE_100,
-                surface=ft.Colors.WHITE,
-            ),
-            font_family="sans-serif",
-            use_material3=True,
-        )
+        self.page.theme = make_theme()
         self.page.padding = 0
-        self.page.bgcolor = self.BG_COLOR
+        self.page.bgcolor = BACKGROUND
         self.page.scroll = ft.ScrollMode.AUTO
 
     def build_ui(self):
@@ -72,6 +68,7 @@ class WordBreakthroughApp:
             expand=True,
         )
 
+        # 底部导航栏
         self.nav_bar = ft.NavigationBar(
             selected_index=0,
             on_change=self.on_nav_change,
@@ -87,35 +84,40 @@ class WordBreakthroughApp:
                 ft.NavigationBarDestination(icon=ft.Icons.SETTINGS_OUTLINED,
                     selected_icon=ft.Icons.SETTINGS, label="设置"),
             ],
-            height=65, bgcolor=ft.Colors.WHITE, shadow_color=ft.Colors.BLACK12,
+            height=NAV_BAR_HEIGHT,
+            bgcolor=SURFACE,
+            shadow_color=ft.Colors.BLACK12,
         )
 
         self.page.add(
             ft.Column([
-                # 顶部状态栏（显示版本号）
+                # 顶部圆角 Header
                 ft.Container(
                     content=ft.Row([
                         ft.Column([
                             ft.Text(self.APP_NAME, size=20, weight=ft.FontWeight.BOLD,
-                                    color=ft.Colors.WHITE),
-                            ft.Text("v2.0.0", size=11, color=ft.Colors.WHITE70),
+                                    color=TEXT_ON_PRIMARY),
+                            ft.Text(f"v{self.VERSION}", size=11,
+                                    color=ft.Colors.with_opacity(0.7, TEXT_ON_PRIMARY)),
                         ]),
                         ft.Container(expand=True),
-                        ft.IconButton(icon=ft.Icons.INFO_OUTLINE, icon_color=ft.Colors.WHITE,
+                        ft.IconButton(icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_ON_PRIMARY,
                             tooltip="关于", on_click=self.show_about),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    padding=ft.Padding(left=16, right=8, top=45, bottom=8),
-                    bgcolor=self.APP_COLOR,
+                    padding=ft.Padding(left=20, right=8, top=HEADER_PADDING_TOP, bottom=16),
+                    bgcolor=PRIMARY,
+                    border_radius=ft.BorderRadius(bottom_left=RADIUS_XL, bottom_right=RADIUS_XL),
+                    shadow=SHADOW_LG,
                 ),
-                    # 页面内容（可滚动）
-                    ft.Container(
-                        content=self.page_container,
-                        expand=True,
-                        bgcolor=self.BG_COLOR,
-                    ),
-                    # 底部导航
-                    self.nav_bar,
-                ],
+                # 页面内容
+                ft.Container(
+                    content=self.page_container,
+                    expand=True,
+                    bgcolor=BACKGROUND,
+                ),
+                # 底部导航
+                self.nav_bar,
+            ],
                 spacing=0,
                 tight=True,
             )
@@ -181,12 +183,21 @@ class WordBreakthroughApp:
         self.page.update()
 
     def show_snackbar(self, message: str, color: str = None):
-        """显示底部提示"""
+        """显示漂浮提示（圆角+图标）"""
         if color is None:
-            color = ft.Colors.GREEN
+            color = PRIMARY
+        has_error = color == ERROR
         snack = ft.SnackBar(
-            content=ft.Text(message),
+            content=ft.Row([
+                ft.Icon(ft.Icons.ERROR_OUTLINE if has_error else ft.Icons.CHECK_CIRCLE,
+                       color=ft.Colors.WHITE, size=18),
+                ft.Container(width=8),
+                ft.Text(message, color=ft.Colors.WHITE, size=FONT_BODY),
+            ]),
             bgcolor=color,
+            behavior=ft.SnackBarBehavior.FLOATING,
+            shape=ft.RoundedRectangleBorder(radius=RADIUS_MD),
+            duration=2500,
             open=True,
         )
         self.page.overlay.append(snack)
