@@ -41,33 +41,61 @@ class StudyPage:
         self.flipped = False
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
+        self.est_text = ft.Text("", size=12, color=TEXT_HINT)
         self.card_container = ft.Container(expand=True)
 
     def build(self):
         words, target, done = self._load_data()
 
+        # 计算预计完成时间（剩余未学词 ÷ 每日目标）
+        try:
+            stats = api_service.get_stats()
+            total = stats.get('total_words', 2281)
+            learned = stats.get('learned_words', 0)
+        except:
+            total = 2281
+            learned = 0
+        remain = max(0, total - learned)
+        cur_target = max(1, target or api_service.get_daily_target())
+        if remain > 0:
+            est_days = (remain + cur_target - 1) // cur_target
+            self.est_text.value = f"剩余{remain}词 · 每日{cur_target}词还需{est_days}天"
+        else:
+            self.est_text.value = "所有单词已学完！ 🎉"
+
         header = ft.Container(
-            content=ft.Row([
+            content=ft.Column([
+                ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.MENU_BOOK, color=PRIMARY, size=20),
+                        padding=ft.Padding(8, 8, 8, 8),
+                        bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                        border_radius=10,
+                    ),
+                    ft.Container(width=10),
+                    ft.Column([
+                        ft.Text("学习新词", size=FONT_LG, weight=ft.FontWeight.BOLD,
+                                color=TEXT_PRIMARY),
+                        self.progress_text,
+                    ], spacing=2, expand=True),
+                    ft.Container(
+                        content=ft.Text(f"{done}/{max(target, len(words))}",
+                                        size=13, weight=ft.FontWeight.BOLD, color=PRIMARY),
+                        padding=ft.Padding(10, 6, 10, 6),
+                        bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                        border_radius=20,
+                    ),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Container(height=4),
                 ft.Container(
-                    content=ft.Icon(ft.Icons.MENU_BOOK, color=PRIMARY, size=20),
-                    padding=ft.Padding(8, 8, 8, 8),
-                    bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
-                    border_radius=10,
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.HOURGLASS_BOTTOM, size=12, color=TEXT_HINT),
+                        ft.Container(width=4),
+                        self.est_text,
+                    ]),
+                    padding=ft.Padding(left=2, top=0, right=2, bottom=0),
                 ),
-                ft.Container(width=10),
-                ft.Column([
-                    ft.Text("学习新词", size=FONT_LG, weight=ft.FontWeight.BOLD,
-                            color=TEXT_PRIMARY),
-                    self.progress_text,
-                ], spacing=2, expand=True),
-                ft.Container(
-                    content=ft.Text(f"{done}/{max(target, len(words))}",
-                                    size=13, weight=ft.FontWeight.BOLD, color=PRIMARY),
-                    padding=ft.Padding(10, 6, 10, 6),
-                    bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
-                    border_radius=20,
-                ),
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ], spacing=0),
             padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
                                right=PAGE_PADDING, bottom=SPACING_SM),
         )
