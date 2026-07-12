@@ -5,7 +5,7 @@
 ==================
 """
 
-import sys, os, threading, io, base64
+import sys, os, threading, io, base64, urllib.parse
 from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -461,10 +461,28 @@ class SettingsPage:
 
             docx_bytes, total = _generate_docx(words_by_date)
             b64 = base64.b64encode(docx_bytes).decode()
-            # 用 data URI 触发浏览器下载（所有设备通用）
-            self.page.launch_url(
-                f"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}"
+            # 构造一个自动下载的HTML页面，用Blob方式下载（解决data URI不下载的问题）
+            html = (
+                '<html><head><meta charset="utf-8"><title>下载</title></head><body>'
+                '<p>⏳ 正在下载...</p>'
+                '<script>'
+                'var b64="' + b64 + '";'
+                'var raw=atob(b64);var arr=new Uint8Array(raw.length);'
+                'for(var i=0;i<raw.length;i++){arr[i]=raw.charCodeAt(i);}'
+                'var blob=new Blob([arr],{type:"application/msword"});'
+                'var url=URL.createObjectURL(blob);'
+                'var a=document.createElement("a");'
+                'a.href=url;a.download="学习记录.docx";'
+                'document.body.appendChild(a);a.click();'
+                'document.body.removeChild(a);'
+                'setTimeout(function(){URL.revokeObjectURL(url);},3000);'
+                'document.body.innerHTML+="<p>✅ 下载完成</p>";'
+                'document.body.innerHTML+="<p>如果未自动下载，请长按下方链接选择「下载链接」：</p>";'
+                'document.body.innerHTML+="<a href=\'"+url+"\' download=\'学习记录.docx\'>📄 学习记录.docx</a>";'
+                '</script>'
+                '</body></html>'
             )
+            self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
             self.app.show_snackbar(f"已生成 {total} 词，正在下载")
         except Exception as ex:
             self.app.show_snackbar(f"生成失败：{ex}", ERROR)
