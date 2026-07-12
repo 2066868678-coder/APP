@@ -1,81 +1,85 @@
 # 单词突围 (Word Breakthrough)
 
-一个帮助用户高效记忆英语单词的 Web 应用程序，支持艾宾浩斯遗忘曲线复习计划。
+基于《单词突围5200》的智能英语单词学习应用，Web/桌面双模式，无需后端，即开即用。
 
 ## 功能
 
-- 📚 **系统化背词** — 上册收录 **2281 个核心词汇**，按 Part1-Part4 分章节
-- 🧠 **智能记忆法** — 每个单词提供谐音法、联想法、词根词缀等记忆方法
-- 📝 **原创例句** — 每个单词配有贴合场景的实用例句
-- 🎯 **艾宾浩斯复习** — 根据遗忘曲线自动安排每日新词和复习计划
-- 📱 **跨平台访问** — Web 模式可在电脑/手机上使用
-- ☁️ **云端部署** — 支持 Render 一键部署，随时随地学习
+- **2281 单词** — 上册完整收录，书本原序，全部数据已校对
+- **翻卡学习** — 正面英文 → 回想 → 翻转查看释义/例句/记忆方法/搭配
+- **艾宾浩斯复习** — 自动调度遗忘曲线：1天→3天→7天→15天→30天
+- **进度追踪** — 学习统计、掌握程度、成就徽章、连续学习天数
+- **本地优先** — 直接读写 SQLite，零配置零依赖零后端
+- **跨平台** — Web 浏览器 + 桌面窗口，手机同 WiFi 可访问
 
 ## 快速启动
 
 ```bash
-# 安装依赖
 pip install -r requirements.txt
-
-# 启动（Web模式）
 python run_app.py
-
-# 启动（桌面窗口）
-python run_app.py --desktop
 ```
 
-Web 模式访问：`http://localhost:8551`
+浏览器打开 `http://localhost:8551`
 
-## 数据来源
+## UI 设计
 
-单词数据来自《单词突围5200》纸质书（上册 PDF 文本提取）。
+2026-07 全面 UI 美化，Teal 主题色 + 统一设计系统：
 
-- 使用 PyMuPDF 按页面 Y 坐标排序精确提取每个单词的音标、释义、记忆方法、例句等
-- 所有数据已校对入库，存储在 `database/words.db`
-- 下册（扫描版 PDF）尚待 OCR 处理
+- `app/theme.py` — 设计令牌（颜色/间距/圆角/阴影）
+- `app/components/app_card.py` — 统一卡片组件
+- 顶栏底部圆角 + 漂浮圆角 Snackbar
+- 学习卡：顶部装饰色条 + 音标胶囊 + 左边缘色条 section
+- 首页：2×2 统计网格 + 环形进度 + 大图标快捷按钮
 
 ## 技术栈
 
 | 组件 | 技术 |
 |------|------|
-| 前端/UI | Flet (Python) |
-| 后端 | FastAPI |
+| UI 框架 | Flet (Material 3) |
 | 数据库 | SQLite / PostgreSQL |
-| PDF提取 | PyMuPDF |
-| 部署 | Render |
-
-## 部署到 Render
-
-1. 将代码推送到 GitHub
-2. 在 Render 中连接仓库，选择 `render.yaml` 配置
-3. Render 自动部署，启动时从 JSON 导入单词数据到 PostgreSQL
-4. 访问 `https://你的应用.onrender.com`
+| 部署 | Render (+ UptimeRobot 保活) |
+| OCR | PyMuPDF (上册) / PaddleOCR (下册待提取) |
 
 ## 项目结构
 
 ```
-E:\APP├── run_app.py              # 应用启动入口
-├── app/                    # Flet 界面代码
-│   └── main.py
-├── backend/                # 后端 API + 数据模型
-│   ├── main.py
-│   ├── models.py
-│   ├── ebbinghaus.py        # 艾宾浩斯复习算法
-│   └── import_data.py
-├── database/               # SQLite 数据库
-│   └── words.db             # 2281 个单词数据
-├── 单词书/                  # PDF 原文 + 扫描结果
-│   ├── 单词突围5200 上册.pdf
-│   └── 单词突围5200 下册.pdf
-├── ocr/                    # PDF 提取代码
-│   └── output/words_export_完整.json  # 修好的单词数据
-├── fix_final.py            # 数据修复脚本
-├── init_db.py              # 数据库初始化
-├── requirements.txt        # 依赖列表
-├── render.yaml             # Render 部署配置
-└── start.bat               # Windows 快捷启动
+E:\APP
+├── run_app.py              # 启动入口
+├── app/
+│   ├── main.py             # Flet 主程序 (顶栏/导航/Snackbar)
+│   ├── theme.py            # 设计令牌系统
+│   ├── components/
+│   │   └── app_card.py     # 统一卡片组件
+│   ├── pages/
+│   │   ├── home_page.py    # 首页 (统计/进度/快捷操作)
+│   │   ├── study_page.py   # 学习页 (翻卡)
+│   │   ├── review_page.py  # 复习页 (翻卡)
+│   │   ├── statistics_page.py # 统计页
+│   │   └── settings_page.py   # 设置页
+│   └── services/
+│       ├── api_service.py  # API 路由
+│       └── local_db.py     # 本地数据库访问
+├── backend/
+│   ├── models.py           # 数据模型
+│   ├── ebbinghaus.py       # 艾宾浩斯算法
+│   └── import_data.py      # 数据导入
+├── database/words.db       # 2281 词 SQLite 数据库
+├── ocr/output/words_export_完整.json
+├── requirements.txt
+├── render.yaml
+└── start.bat
 ```
 
-## 许可证
+## 数据来源
 
-个人学习项目
+《单词突围5200》上册 PDF 提取，2281 词，含音标/释义/词性/例句/记忆方法/固定搭配/派生词。
+下册（扫描版 375 页）待 PaddleOCR 提取。
+
+## 部署
+
+推送到 GitHub 后 Render 自动部署：
+
+```bash
+git push origin main
+```
+
+Render `render.yaml` 配置：Python 3 + Gunicorn + Flet Web，启动时自动从 JSON 导入数据至 PostgreSQL。
