@@ -371,6 +371,59 @@ def get_all_words_with_status():
         s.close()
 
 
+# ========== 学习日期查询 ==========
+
+def get_study_dates():
+    """获取所有有学习记录的日期及词数"""
+    s = _get_session()
+    try:
+        from sqlalchemy import func as sa_func
+        rows = s.query(
+            sa_func.date(StudyRecord.studied_at).label('study_date'),
+            sa_func.count(sa_func.distinct(StudyRecord.word_id)).label('word_count')
+        ).group_by(sa_func.date(StudyRecord.studied_at)).order_by(
+            sa_func.date(StudyRecord.studied_at).desc()
+        ).all()
+        return [{'date': str(r.study_date), 'count': r.word_count} for r in rows]
+    finally:
+        s.close()
+
+
+def get_words_by_dates(date_list):
+    """获取指定日期的所有学习单词"""
+    s = _get_session()
+    try:
+        from sqlalchemy import func as sa_func
+        rows = s.query(
+            sa_func.date(StudyRecord.studied_at).label('study_date'),
+            Word.word, Word.phonetic, Word.pos, Word.meaning,
+            StudyRecord.result,
+        ).join(Word, StudyRecord.word_id == Word.id
+        ).filter(
+            sa_func.date(StudyRecord.studied_at).in_(date_list)
+        ).distinct(
+            sa_func.date(StudyRecord.studied_at), Word.id
+        ).order_by(
+            sa_func.date(StudyRecord.studied_at), Word.id
+        ).all()
+
+        grouped = {}
+        for r in rows:
+            d = str(r.study_date)
+            if d not in grouped:
+                grouped[d] = []
+            grouped[d].append({
+                'word': r.word,
+                'phonetic': r.phonetic,
+                'pos': r.pos,
+                'meaning': r.meaning,
+                'result': r.result,
+            })
+        return grouped
+    finally:
+        s.close()
+
+
 # ========== 优化批量查询（减少跨设备同步延迟） ==========
 
 def get_home_data():

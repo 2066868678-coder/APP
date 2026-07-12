@@ -21,5 +21,8 @@ openpyxl>=3.1.0              # Excel文件支持
 # ===== 手机App =====
 flet>=0.26.0                 # 移动端UI框架
 
+# ===== 文档导出 =====
+python-docx>=1.1.0           # 生成Word文档
+
 # ===== 云同步 =====
 httpx>=0.28.0                # HTTP客户端（用于LeanCloud API）

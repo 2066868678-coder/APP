@@ -67,3 +67,11 @@ def get_home_data():
 
 def get_study_data():
     return local_db.get_study_data()
+
+# ========== 学习记录导出 ==========
+
+def get_study_dates():
+    return local_db.get_study_dates()
+
+def get_words_by_dates(date_list):
+    return local_db.get_words_by_dates(date_list)
