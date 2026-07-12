@@ -46,18 +46,19 @@ class StudyPage:
         self.card_container = ft.Container(expand=True)
 
     def build(self):
-        words, target, done = self._load_data()
+        # 批量获取学习页数据（1次DB会话 vs 原来4次）
+        study_data = self._load_data()
+        words = study_data['words']
+        target = study_data['target']
+        done = study_data['done']
 
-        # 计算预计完成时间（剩余未学词 ÷ 每日目标）
-        try:
-            stats = api_service.get_stats()
-            total = stats.get('total_words', 2281)
-            learned = stats.get('learned_words', 0)
-        except:
-            total = 2281
-            learned = 0
+        # 预计完成时间
+        stats = study_data['stats']
+        total = stats.get('total_words', 2281)
+        learned = stats.get('learned_words', 0)
         remain = max(0, total - learned)
-        cur_target = max(1, api_service.get_daily_target())  # 实时读取设置
+        cur_target = max(1, study_data.get('daily_target', 20))
+        self._fresh_target = cur_target  # 供 _update_progress 使用，避免重复查询
         if remain > 0:
             est_days = (remain + cur_target - 1) // cur_target
             self.est_text.value = f"剩余{remain}词 · 每日{cur_target}词还需{est_days}天"
@@ -186,27 +187,17 @@ class StudyPage:
         )
 
     def _load_data(self):
-        """从数据库读取今日新词数据（每次build都重读，本地SQLite极快）"""
+        """从数据库读取今日新词数据（批量1次查询）"""
         try:
-            plan = api_service.get_today_plan()
-            today_words = api_service.get_today_words()
-            words = []
-            target = api_service.get_daily_target()
-            done = 0
-            if plan and plan.get('plan'):
-                target = plan['plan'].get('new_words_target', target)
-                done = plan['plan'].get('new_words_done', 0)
-            if today_words and today_words.get('new_words'):
-                words = today_words['new_words']
-            if not words:
-                resp = api_service.get_new_words_for_study()
-                if resp and resp.get('words'):
-                    words = resp['words']
+            return api_service.get_study_data()
         except Exception:
-            words = []
-            target = api_service.get_daily_target()
-            done = 0
-        return words, target, done
+            return {
+                'words': [],
+                'target': api_service.get_daily_target(),
+                'done': 0,
+                'daily_target': api_service.get_daily_target(),
+                'stats': {'total_words': 2281, 'learned_words': 0, 'mastered_words': 0},
+            }
 
     def _show_current_word(self, initial=False):
         wd = self._get_word()
@@ -417,8 +408,7 @@ class StudyPage:
         return self.words[self.word_index]
 
     def _update_progress(self, initial=False):
-        # 分母始终从设置读取最新目标，不受缓存影响
-        fresh_target = max(1, api_service.get_daily_target())
+        fresh_target = max(1, self._fresh_target)
         total = max(fresh_target, len(self.words))
         cur = self.word_index + 1
         done = self.new_words_done

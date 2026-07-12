@@ -35,14 +35,15 @@ class HomePage:
 
     def _render(self):
         try:
-            plan = api_service.get_today_plan()
-            stats = api_service.get_stats()
+            data = api_service.get_home_data()
+            plan = data.get('plan', {}) if data else {}
+            stats = data.get('stats', {}) if data else {}
         except Exception:
-            plan = None
-            stats = None
+            plan = {}
+            stats = {}
 
-        p = plan.get('plan', {}) if plan else {}
-        s = stats if stats else {}
+        p = plan
+        s = stats
 
         total = s.get('total_words', 0)
         learned = s.get('learned_words', 0)

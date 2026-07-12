@@ -369,3 +369,139 @@ def get_all_words_with_status():
         return {'words': result, 'total': len(result), 'studied': len(studied_ids)}
     finally:
         s.close()
+
+
+# ========== 优化批量查询（减少跨设备同步延迟） ==========
+
+def get_home_data():
+    """首页数据：今日计划 + 统计，1次DB会话"""
+    s = _get_session()
+    try:
+        today = date.today()
+        total = s.query(func.count(Word.id)).scalar() or 0
+        learned = s.query(StudyRecord.word_id).distinct().count()
+        mastered = s.query(StudyRecord.word_id).filter(
+            StudyRecord.review_interval >= 15,
+            StudyRecord.result == 'remember'
+        ).distinct().count()
+
+        plan = s.query(DailyPlan).filter(DailyPlan.plan_date == today).first()
+        if not plan:
+            saved = get_setting('daily_new_words_target', '20')
+            try:
+                target = int(saved)
+            except ValueError:
+                target = 20
+            plan = DailyPlan(
+                plan_date=today, new_words_target=target,
+                new_words_done=0, review_done=0,
+            )
+            s.add(plan)
+            s.commit()
+
+        week_ago = today - timedelta(days=7)
+        week_study = s.query(func.count(StudyRecord.id)).filter(
+            StudyRecord.studied_at >= week_ago
+        ).scalar() or 0
+
+        study_days = s.query(DailyPlan.plan_date).filter(
+            DailyPlan.new_words_done > 0
+        ).distinct().count()
+
+        streak = 0
+        check = today
+        while True:
+            dp = s.query(DailyPlan).filter(DailyPlan.plan_date == check).first()
+            if dp and (dp.new_words_done > 0 or dp.review_done > 0):
+                streak += 1
+                check -= timedelta(days=1)
+            else:
+                break
+
+        return {
+            'plan': plan.to_dict(),
+            'stats': {
+                'total_words': total,
+                'learned_words': learned,
+                'mastered_words': mastered,
+                'progress_percent': round(learned / total * 100, 1) if total > 0 else 0,
+                'today': plan.to_dict(),
+                'week_study_count': week_study,
+                'study_days': study_days,
+                'streak_days': streak,
+            }
+        }
+    finally:
+        s.close()
+
+
+def get_study_data():
+    """学习页面数据：新词列表 + 今日计划 + 统计 + 目标，1次DB会话"""
+    s = _get_session()
+    try:
+        today = date.today()
+        plan = s.query(DailyPlan).filter(DailyPlan.plan_date == today).first()
+
+        # 确保plan存在
+        if not plan:
+            saved_target = get_setting('daily_new_words_target', '20')
+            try:
+                target = int(saved_target)
+            except ValueError:
+                target = 20
+            plan = DailyPlan(
+                plan_date=today, new_words_target=target,
+                new_words_done=0, review_done=0,
+            )
+            s.add(plan)
+            s.commit()
+
+        # 今日新词
+        new_words = []
+        if plan.word_ids_new:
+            ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
+            all_nw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
+            studied_ids_set = set(r[0] for r in s.query(StudyRecord.word_id).filter(
+                StudyRecord.word_id.in_(ids)).distinct().all())
+            new_words = [w for w in all_nw if w.id not in studied_ids_set]
+
+        # 未锁定则锁定
+        if not new_words:
+            studied = s.query(StudyRecord.word_id).distinct().all()
+            studied_ids = [r[0] for r in studied]
+            q = s.query(Word)
+            if studied_ids:
+                q = q.filter(~Word.id.in_(studied_ids))
+            saved_target = get_setting('daily_new_words_target', '20')
+            try:
+                limit_n = int(saved_target)
+            except ValueError:
+                limit_n = 10
+            available = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(limit_n).all()
+            new_words = available
+            if available:
+                ids_str = ','.join(str(w.id) for w in available)
+                plan.word_ids_new = ids_str
+                s.commit()
+
+        # 统计
+        total = s.query(func.count(Word.id)).scalar() or 0
+        learned = s.query(StudyRecord.word_id).distinct().count()
+        mastered = s.query(StudyRecord.word_id).filter(
+            StudyRecord.review_interval >= 15,
+            StudyRecord.result == 'remember'
+        ).distinct().count()
+
+        return {
+            'words': [w.to_dict() for w in new_words],
+            'target': plan.new_words_target if plan else 20,
+            'done': plan.new_words_done if plan else 0,
+            'daily_target': int(get_setting('daily_new_words_target', '20')),
+            'stats': {
+                'total_words': total,
+                'learned_words': learned,
+                'mastered_words': mastered,
+            }
+        }
+    finally:
+        s.close()

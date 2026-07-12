@@ -59,3 +59,11 @@ def get_random_words(count=10):
 
 def get_all_words_with_status():
     return local_db.get_all_words_with_status()
+
+# ========== 优化批量接口 ==========
+
+def get_home_data():
+    return local_db.get_home_data()
+
+def get_study_data():
+    return local_db.get_study_data()
