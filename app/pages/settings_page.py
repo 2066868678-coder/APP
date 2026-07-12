@@ -22,6 +22,14 @@ from app.components.app_card import AppCard
 from app.services import api_service, local_db
 from backend.models import StudyRecord, DailyPlan
 
+# 检查Word文档依赖
+try:
+    from docx import Document
+    from docx.shared import Pt
+    _DOCX_AVAILABLE = True
+except ImportError:
+    _DOCX_AVAILABLE = False
+
 
 def _clear_study_records():
     s = local_db._get_session()
@@ -39,8 +47,6 @@ def _clear_study_records():
 
 def _generate_docx(words_by_date):
     """生成Word文档（内存中）"""
-    from docx import Document
-    from docx.shared import Pt
     doc = Document()
 
     # 标题
@@ -444,6 +450,9 @@ class SettingsPage:
 
     def _do_download(self, selected):
         """生成并下载Word文档"""
+        if not _DOCX_AVAILABLE:
+            self.app.show_snackbar("缺少 python-docx 库，运行 pip install python-docx", ERROR)
+            return
         try:
             words_by_date = api_service.get_words_by_dates(selected)
             if not words_by_date:
