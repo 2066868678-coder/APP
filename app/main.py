@@ -17,10 +17,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import flet as ft
 from app.theme import (
-    PRIMARY, PRIMARY_DARK, BACKGROUND, SURFACE,
-    TEXT_ON_PRIMARY, HEADER_HEIGHT, HEADER_PADDING_TOP,
-    NAV_BAR_HEIGHT, PAGE_PADDING, RADIUS_MD, RADIUS_XL, SHADOW_LG,
-    FONT_BODY,
+    PRIMARY, BACKGROUND, SURFACE,
+    TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
+    NAV_BAR_HEIGHT, RADIUS_MD, RADIUS_XL, SHADOW_LG,
+    FONT_BODY, ERROR,
     make_theme,
 )
 from app.pages.home_page import HomePage
@@ -106,7 +106,7 @@ class WordBreakthroughApp:
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     padding=ft.Padding(left=20, right=8, top=HEADER_PADDING_TOP, bottom=16),
                     bgcolor=PRIMARY,
-                    border_radius=ft.BorderRadius(bottom_left=RADIUS_XL, bottom_right=RADIUS_XL),
+                    border_radius=ft.BorderRadius(0, 0, RADIUS_XL, RADIUS_XL),
                     shadow=SHADOW_LG,
                 ),
                 # 页面内容
