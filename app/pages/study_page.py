@@ -41,6 +41,7 @@ class StudyPage:
         self.flipped = False
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
+        self.badge_text = ft.Text("", size=13, weight=ft.FontWeight.BOLD, color=PRIMARY)
         self.est_text = ft.Text("", size=12, color=TEXT_HINT)
         self.card_container = ft.Container(expand=True)
 
@@ -79,8 +80,7 @@ class StudyPage:
                         self.progress_text,
                     ], spacing=2, expand=True),
                     ft.Container(
-                        content=ft.Text(f"{done}/{max(target, len(words))}",
-                                        size=13, weight=ft.FontWeight.BOLD, color=PRIMARY),
+                        content=self.badge_text,
                         padding=ft.Padding(10, 6, 10, 6),
                         bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
                         border_radius=20,
@@ -422,8 +422,10 @@ class StudyPage:
         cur = self.word_index + 1
         done = self.new_words_done
         self.progress_text.value = f"今日新词: {done}/{total}  |  当前 {cur}/{total}"
+        self.badge_text.value = f"{done}/{max(self.total_new, len(self.words))}"
         if not initial:
             self.progress_text.update()
+            self.badge_text.update()
 
     def _show_completion(self):
         self.action_buttons.visible = False
