@@ -335,7 +335,7 @@ class SettingsPage:
                     ft.Container(height=8),
                     self._info_row("应用", "单词突围 (独立版)"),
                     ft.Divider(height=1, color=ft.Colors.GREY_100),
-                    self._info_row("版本", "2.0.0"),
+                    self._info_row("版本", "2.1.0"),
                     ft.Divider(height=1, color=ft.Colors.GREY_100),
                     self._info_row("数据来源", "《单词突围5200》上册"),
                     ft.Divider(height=1, color=ft.Colors.GREY_100),

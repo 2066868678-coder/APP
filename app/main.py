@@ -34,7 +34,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    VERSION = "2.0.0"
+    VERSION = "2.1.0"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -144,9 +144,14 @@ class WordBreakthroughApp:
             self.page.update()
 
     def show_about(self, e):
-        VERSION = "2.0.0"
-        VERSION_DATE = "2026-07-11"
+        VERSION = "2.1.0"
+        VERSION_DATE = "2026-07-12"
         CHANGES = (
+            "【2.1.0】2026-07-12\n"
+            "  - UI全面美化（Teal主题+设计系统）\n"
+            "  - 学习页增加剩余天数预估\n"
+            "  - 学习记录导出为Word文档\n"
+            "  - 批量查询优化跨设备同步速度\n"
             "【2.0.0】2026-07-11\n"
             "  - 全面修复上册2281个单词数据\n"
             "  - 修复释义/音标/记忆方法/例句错配\n"
