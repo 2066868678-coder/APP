@@ -186,8 +186,7 @@ class StudyPage:
         )
 
     def _load_data(self):
-        if self.words and self.word_index < len(self.words):
-            return self.words, self.total_new or 20, self.new_words_done
+        """从数据库读取今日新词数据（每次build都重读，本地SQLite极快）"""
         try:
             plan = api_service.get_today_plan()
             today_words = api_service.get_today_words()
@@ -418,11 +417,13 @@ class StudyPage:
         return self.words[self.word_index]
 
     def _update_progress(self, initial=False):
-        total = max(self.total_new, len(self.words))
+        # 分母始终从设置读取最新目标，不受缓存影响
+        fresh_target = max(1, api_service.get_daily_target())
+        total = max(fresh_target, len(self.words))
         cur = self.word_index + 1
         done = self.new_words_done
         self.progress_text.value = f"今日新词: {done}/{total}  |  当前 {cur}/{total}"
-        self.badge_text.value = f"{done}/{max(self.total_new, len(self.words))}"
+        self.badge_text.value = f"{done}/{total}"
         if not initial:
             self.progress_text.update()
             self.badge_text.update()
