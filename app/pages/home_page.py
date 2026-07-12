@@ -17,7 +17,7 @@ from app.theme import (
     PAGE_PADDING, CARD_GAP, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL,
     RADIUS_MD, RADIUS_LG, RADIUS_SM,
     SHADOW_SM, SHADOW_MD,
-    FONT_SM, FONT_BODY, FONT_LG, FONT_XL, FONT_XXL, FONT_XXXL,
+    FONT_XS, FONT_SM, FONT_BODY, FONT_LG, FONT_XL, FONT_XXL, FONT_XXXL,
 )
 from app.components.app_card import AppCard, AppCardSmall
 from app.services import api_service
