@@ -500,21 +500,20 @@ class ReviewPage:
 
     # ========== 发音 & 翻译辅助 ==========
     def _speak(self, text):
-        """播放发音 - 使用有道词典（国内可用）"""
+        """播放发音 - Audio元素播放有道词典发音"""
         try:
-            import urllib.request, io, base64
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                audio_bytes = resp.read()
-            if audio_bytes:
-                b64 = base64.b64encode(audio_bytes).decode()
-                self.page.launch_url(f"data:audio/mp3;base64,{b64}")
+            audio_url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
+            html = (
+                '<html><body style="margin:0;background:#f5f5f5;display:flex;justify-content:center;align-items:center;height:100vh;">'
+                '<div style="text-align:center;font-family:sans-serif;color:#999;">🔊 播放中...</div>'
+                '<script>'
+                'var a=new Audio("' + audio_url + '");'
+                'a.play().then(function(){setTimeout(function(){window.close();},4000);});'
+                '</script></body></html>'
+            )
+            self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
         except Exception:
-            try:
-                self.page.launch_url(f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2")
-            except:
-                pass
+            pass
 
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]
