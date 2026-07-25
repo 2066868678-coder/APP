@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>body{margin:0;background:#f5f7fa;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;}</style>
+</head>
+<body>
+<div id="s" style="text-align:center;color:#999;">
+  <div style="font-size:48px;margin-bottom:16px">🔊</div>
+  <div id="t" style="font-size:18px;color:#212121;font-weight:bold"></div>
+  <div style="font-size:14px;margin-top:8px">发音中...</div>
+</div>
+<script>
+var p=new URLSearchParams(location.search);
+var text=p.get('text')||'hello';
+document.getElementById('t').textContent=text;
+// 先用有道取音频
+var audio=new Audio('https://dict.youdao.com/dictvoice?audio='+encodeURIComponent(text)+'&type=2');
+audio.play().then(function(){
+  setTimeout(function(){window.close()},5000);
+}).catch(function(){
+  // 有道不行就用SpeechSynthesis
+  var msg=new SpeechSynthesisUtterance(text);
+  msg.lang='en-US';msg.rate=0.9;
+  speechSynthesis.speak(msg);
+  setTimeout(function(){window.close()},5000);
+});
+</script>
+</body>
+</html>

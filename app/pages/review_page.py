@@ -500,10 +500,9 @@ class ReviewPage:
 
     # ========== 发音 & 翻译辅助 ==========
     def _speak(self, text):
-        """复制单词到剪贴板，方便粘贴到词典App发音"""
+        """打开发音页面播放音频"""
         try:
-            self.page.clipboard = text
-            self.app.show_snackbar(f"✅ 已复制「{text}」到剪贴板")
+            self.page.launch_url(f"/assets/player.html?text={urllib.parse.quote(text)}")
         except Exception:
             pass
 
