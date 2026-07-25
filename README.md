@@ -36,7 +36,7 @@ pip install -r requirements.txt
 python run_app.py
 ```
 
-浏览器打开 **http://localhost:8551**  
+浏览器打开   https://word-breakthrough.onrender.com/
 手机（同 WiFi）打开 **http://192.168.3.59:8551**
 
 ---
