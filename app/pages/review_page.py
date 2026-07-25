@@ -500,10 +500,9 @@ class ReviewPage:
 
     # ========== 发音 & 翻译辅助 ==========
     def _speak(self, text):
-        """播放发音"""
+        """播放发音 - 通过本地服务器中转"""
         try:
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-            self.app.show_snackbar(f"🔊 {text}")
+            url = f"/tts?text={urllib.parse.quote(text)}"
             self.page.launch_url(url)
         except Exception as ex:
             self.app.show_snackbar(f"发音失败: {ex}")
