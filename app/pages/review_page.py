@@ -500,20 +500,13 @@ class ReviewPage:
 
     # ========== 发音 & 翻译辅助 ==========
     def _speak(self, text):
-        """播放发音 - Audio元素播放有道词典发音"""
+        """播放发音"""
         try:
-            audio_url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-            html = (
-                '<html><body style="margin:0;background:#f5f5f5;display:flex;justify-content:center;align-items:center;height:100vh;">'
-                '<div style="text-align:center;font-family:sans-serif;color:#999;">🔊 播放中...</div>'
-                '<script>'
-                'var a=new Audio("' + audio_url + '");'
-                'a.play().then(function(){setTimeout(function(){window.close();},4000);});'
-                '</script></body></html>'
-            )
-            self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
-        except Exception:
-            pass
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
+            self.app.show_snackbar(f"🔊 {text}")
+            self.page.launch_url(url)
+        except Exception as ex:
+            self.app.show_snackbar(f"发音失败: {ex}")
 
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]
