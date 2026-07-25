@@ -146,7 +146,7 @@ class ReviewPage:
         return ft.Column([
             header,
             ft.Container(content=self.card_container, expand=True),
-            self.action_buttons, hint,
+            self.action_buttons,
         ], spacing=0, tight=True)
 
     def _build_empty(self, msg=None):
