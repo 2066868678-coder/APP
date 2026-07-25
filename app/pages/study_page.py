@@ -389,18 +389,34 @@ class StudyPage:
         )
 
     def _section_with_audio(self, title, icon, content, bg_color, accent_color, word):
-        """信息区 — 带发音按钮"""
+        """信息区 — 每项带发音按钮"""
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
-        for item in items:
+        for item in items[:5]:  # 最多5条，避免太长
+            # 提取英文部分用于发音（去掉中文）
+            speak_text_match = re.search(r'[a-zA-Z].*?(?=[一-鿿]|$)', item)
+            speak_text = speak_text_match.group(0).strip() if speak_text_match else item
             content_parts.append(
                 ft.Row([
                     ft.Container(
-                        content=ft.Text("• ", size=14, color=TEXT_HINT),
+                        content=ft.Text("•", size=14, color=TEXT_HINT),
                         width=16,
                     ),
-                    ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                    ft.Stack([
+                        ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                    ], expand=True),
+                    ft.IconButton(
+                        icon=ft.Icons.VOLUME_UP,
+                        icon_size=16,
+                        icon_color=accent_color,
+                        tooltip="听发音",
+                        on_click=lambda e, t=speak_text: self._speak(t),
+                    ),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START)
+            )
+        if len(items) > 5:
+            content_parts.append(
+                ft.Text(f"... 还有 {len(items)-5} 条", size=11, color=TEXT_HINT)
             )
         return ft.Container(
             content=ft.Column([
@@ -409,13 +425,6 @@ class StudyPage:
                     ft.Container(width=6),
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP,
-                        icon_size=16,
-                        icon_color=accent_color,
-                        tooltip="听发音",
-                        on_click=lambda e, w=word: self._speak(w),
-                    ),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=6),
                 *content_parts,
@@ -460,12 +469,19 @@ class StudyPage:
                                     weight=ft.FontWeight.BOLD),
                             ft.Text(en, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
                             ft.IconButton(
+                                icon=ft.Icons.VOLUME_UP,
+                                icon_size=16,
+                                icon_color="#CE93D8",
+                                tooltip="听发音",
+                                on_click=lambda e, t=en[:100]: self._speak(t),
+                            ),
+                            ft.IconButton(
                                 icon=ft.Icons.EXPAND_MORE,
                                 icon_size=16,
                                 icon_color="#CE93D8",
                                 tooltip="显示/隐藏翻译",
                             ),
-                        ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.START),
+                        ], spacing=2, vertical_alignment=ft.CrossAxisAlignment.START),
                         ft.Container(height=2),
                         zh_row,
                     ], spacing=0),
@@ -530,8 +546,25 @@ class StudyPage:
         return f"https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q={urllib.parse.quote(text)}"
 
     def _speak(self, text):
-        """播放发音"""
-        self.page.launch_url(self._get_tts_url(text))
+        """使用浏览器内置语音合成发音（免费离线，无需网络）"""
+        escaped = text.replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n')
+        html = (
+            '<html><head><meta charset="utf-8"><title>发音</title></head><body>'
+            '<p style="font-family:sans-serif;text-align:center;padding-top:40vh;color:#999;">'
+            '🔊 发音中...</p>'
+            '<script>'
+            'var msg=new SpeechSynthesisUtterance("' + escaped + '");'
+            'msg.lang="en-US";msg.rate=0.9;'
+            'speechSynthesis.speak(msg);'
+            'setTimeout(function(){window.close()},3000);'
+            '</script></body></html>'
+        )
+        self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
+        # 顺便把语音也存到剪贴板，方便粘贴到词典App
+        try:
+            self.page.clipboard = text
+        except:
+            pass
 
     # ========== 例句拆分：英文+中文 ==========
     def _split_en_zh(self, text):

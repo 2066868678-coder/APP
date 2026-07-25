@@ -410,26 +410,33 @@ class ReviewPage:
         )
 
     def _section_with_audio(self, title, content, bg_color, accent_color, word):
-        """信息区 — 带发音按钮"""
+        """信息区 — 每项带发音按钮"""
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
-        for item in items:
+        for item in items[:5]:
+            # 提取英文部分
+            speak_text_match = re.search(r'[a-zA-Z].*?(?=[一-鿿]|$)', item)
+            speak_text = speak_text_match.group(0).strip() if speak_text_match else item
             content_parts.append(
                 ft.Row([
                     ft.Container(width=16, content=ft.Text("•", size=14, color=TEXT_HINT)),
                     ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                    ft.IconButton(
+                        icon=ft.Icons.VOLUME_UP, icon_size=16,
+                        icon_color=accent_color, tooltip="听发音",
+                        on_click=lambda e, t=speak_text: self._speak(t),
+                    ),
                 ], spacing=0)
+            )
+        if len(items) > 5:
+            content_parts.append(
+                ft.Text(f"... 还有 {len(items)-5} 条", size=11, color=TEXT_HINT)
             )
         return ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP, icon_size=16,
-                        icon_color=accent_color, tooltip="听发音",
-                        on_click=lambda e, w=word: self._speak(w),
-                    ),
                 ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=6),
                 *content_parts,
@@ -462,8 +469,13 @@ class ReviewPage:
                         ft.Row([
                             ft.Text(f"{i+1}. ", size=FONT_BODY, color=TEXT_HINT, weight=ft.FontWeight.BOLD),
                             ft.Text(en, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                            ft.IconButton(
+                                icon=ft.Icons.VOLUME_UP, icon_size=16, icon_color="#CE93D8",
+                                tooltip="听发音",
+                                on_click=lambda e, t=en[:100]: self._speak(t),
+                            ),
                             ft.IconButton(icon=ft.Icons.EXPAND_MORE, icon_size=16, icon_color="#CE93D8", tooltip="显示/隐藏翻译"),
-                        ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.START),
+                        ], spacing=2, vertical_alignment=ft.CrossAxisAlignment.START),
                         ft.Container(height=2), zh_row,
                     ], spacing=0),
                     padding=ft.Padding(left=4, top=6, right=4, bottom=6), ink=True,
@@ -491,7 +503,24 @@ class ReviewPage:
         return f"https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q={urllib.parse.quote(text)}"
 
     def _speak(self, text):
-        self.page.launch_url(self._get_tts_url(text))
+        """使用浏览器内置语音合成发音（免费离线）"""
+        escaped = text.replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n')
+        html = (
+            '<html><head><meta charset="utf-8"><title>发音</title></head><body>'
+            '<p style="font-family:sans-serif;text-align:center;padding-top:40vh;color:#999;">'
+            '🔊 发音中...</p>'
+            '<script>'
+            'var msg=new SpeechSynthesisUtterance("' + escaped + '");'
+            'msg.lang="en-US";msg.rate=0.9;'
+            'speechSynthesis.speak(msg);'
+            'setTimeout(function(){window.close()},3000);'
+            '</script></body></html>'
+        )
+        self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
+        try:
+            self.page.clipboard = text
+        except:
+            pass
 
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]
