@@ -500,18 +500,12 @@ class ReviewPage:
 
     # ========== 发音 & 翻译辅助 ==========
     def _speak(self, text):
-        """播放发音 - 服务端获取音频后 inline 播放"""
+        """复制单词到剪贴板，方便粘贴到词典App发音"""
         try:
-            import urllib.request, base64
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                audio = resp.read()
-            if audio and len(audio) > 100:
-                b64 = base64.b64encode(audio).decode()
-                self.page.launch_url(f"data:audio/mp3;base64,{b64}")
-        except Exception as ex:
-            self.app.show_snackbar(f"发音失败: {ex}")
+            self.page.clipboard = text
+            self.app.show_snackbar(f"✅ 已复制「{text}」到剪贴板")
+        except Exception:
+            pass
 
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]
