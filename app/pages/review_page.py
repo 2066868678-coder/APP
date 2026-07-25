@@ -222,13 +222,19 @@ class ReviewPage:
         self.flipped = False
 
         # 提取固定搭配（仅英文部分，用于反推练习）
-        collocation_items = []
+        collocation_en = []
         if wd.get('collocations'):
-            for item in wd['collocations'].split('|'):
-                item = item.strip()
-                if item:
-                    # 保留中英文完整显示在卡片正面
-                    collocation_items.append(item)
+            # 先按分号或竖线分割
+            raw_items = [t.strip() for t in wd['collocations'].replace('；', '|').replace(';', '|').split('|') if t.strip()]
+            for item in raw_items:
+                # 拆出英文部分（中文前的内容）
+                match = re.search(r'[一-鿿]', item)
+                if match:
+                    en_part = item[:match.start()].strip()
+                    if en_part:
+                        collocation_en.append(en_part)
+                else:
+                    collocation_en.append(item)
 
         front = ft.Container(
             content=ft.Column([
@@ -268,8 +274,8 @@ class ReviewPage:
                         padding=ft.Padding(8, 4, 8, 4),
                         bgcolor=ft.Colors.with_opacity(0.06, SECONDARY),
                         border_radius=8,
-                    ) for item in collocation_items
-                ] if collocation_items else []),
+                    ) for item in collocation_en
+                ] if collocation_en else []),
                 ft.Container(height=16),
                 ft.Row([
                     ft.Icon(ft.Icons.TOUCH_APP, size=14, color=TEXT_HINT),
