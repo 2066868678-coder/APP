@@ -500,11 +500,8 @@ class ReviewPage:
 
     # ========== 发音 & 翻译辅助 ==========
     def _speak(self, text):
-        """打开发音页面播放音频"""
-        try:
-            self.page.launch_url(f"/assets/player.html?text={urllib.parse.quote(text)}")
-        except Exception:
-            pass
+        """播放发音"""
+        self.app.play_audio(text)
 
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]

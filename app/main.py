@@ -15,7 +15,9 @@ import os
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import urllib.parse
 import flet as ft
+import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -46,6 +48,10 @@ class WordBreakthroughApp:
         self.review_page = ReviewPage(self)
         self.statistics_page = StatisticsPage(self)
         self.settings_page = SettingsPage(self)
+
+        # 全局音频播放器
+        self._audio_player = fta.Audio(src="", volume=1.0)
+        page.services.append(self._audio_player)
 
         # 当前页面索引
         self.current_index = 0
@@ -199,6 +205,16 @@ class WordBreakthroughApp:
         """关闭对话框"""
         dlg.open = False
         self.page.update()
+
+    def play_audio(self, text):
+        """播放单词发音（内嵌音频，不弹新页面）"""
+        try:
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
+            self._audio_player.src = url
+            self._audio_player.volume = 1.0
+            self.page.run_task(self._audio_player.play)
+        except Exception:
+            pass
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""

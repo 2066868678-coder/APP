@@ -542,11 +542,8 @@ class StudyPage:
 
     # ========== 发音功能 ==========
     def _speak(self, text):
-        """打开发音页面播放音频"""
-        try:
-            self.page.launch_url(f"/assets/player.html?text={urllib.parse.quote(text)}")
-        except Exception:
-            pass
+        """播放发音"""
+        self.app.play_audio(text)
 
     # ========== 例句拆分：英文+中文 ==========
     def _split_en_zh(self, text):

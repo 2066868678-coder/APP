@@ -20,6 +20,7 @@ openpyxl>=3.1.0              # Excel文件支持
 
 # ===== 手机App =====
 flet>=0.26.0                 # 移动端UI框架
+flet-audio>=0.85.0           # 音频播放
 
 # ===== 文档导出 =====
 python-docx>=1.1.0           # 生成Word文档

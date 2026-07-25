@@ -140,4 +140,4 @@ if __name__ == '__main__':
         print("按 Ctrl+C 停止")
         print("=" * 50)
         port = int(os.getenv("PORT", 8551))
-        ft.run(main=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=port, assets_dir="assets")
+        ft.run(main=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=port)
