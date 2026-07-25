@@ -1,29 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<style>body{margin:0;background:#f5f7fa;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;}</style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#00897B;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif;padding:20px}
+.card{background:#fff;border-radius:20px;padding:40px 32px;text-align:center;width:100%;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.word{font-size:28px;font-weight:bold;color:#212121;margin-bottom:8px}
+.phonetic{font-size:16px;color:#666;margin-bottom:24px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:16px 40px;background:#00897B;color:#fff;border:none;border-radius:50px;font-size:18px;cursor:pointer;transition:all 0.2s;touch-action:manipulation}
+.btn:active{transform:scale(0.95)}
+.btn-icon{font-size:24px}
+.status{font-size:14px;color:#999;margin-top:16px}
+</style>
 </head>
 <body>
-<div id="s" style="text-align:center;color:#999;">
-  <div style="font-size:48px;margin-bottom:16px">🔊</div>
-  <div id="t" style="font-size:18px;color:#212121;font-weight:bold"></div>
-  <div style="font-size:14px;margin-top:8px">发音中...</div>
+<div class="card">
+  <div class="word" id="word">loading...</div>
+  <div class="phonetic" id="phonetic"></div>
+  <button class="btn" id="playBtn" ontouchend="play()" onclick="play()">
+    <span class="btn-icon">🔊</span> 点击发音
+  </button>
+  <div class="status" id="status">点击按钮播放</div>
 </div>
 <script>
 var p=new URLSearchParams(location.search);
 var text=p.get('text')||'hello';
-document.getElementById('t').textContent=text;
-// 先用有道取音频
-var audio=new Audio('https://dict.youdao.com/dictvoice?audio='+encodeURIComponent(text)+'&type=2');
-audio.play().then(function(){
-  setTimeout(function(){window.close()},5000);
-}).catch(function(){
-  // 有道不行就用SpeechSynthesis
-  var msg=new SpeechSynthesisUtterance(text);
-  msg.lang='en-US';msg.rate=0.9;
-  speechSynthesis.speak(msg);
-  setTimeout(function(){window.close()},5000);
-});
+document.getElementById('word').textContent=text;
+
+function play(){
+  var btn=document.getElementById('playBtn');
+  var st=document.getElementById('status');
+  btn.disabled=true; btn.style.opacity='0.6';
+  st.textContent='🔊 发音中...';
+
+  // 方法1: 有道
+  var a1=new Audio('https://dict.youdao.com/dictvoice?audio='+encodeURIComponent(text)+'&type=2');
+  a1.play().then(function(){
+    st.textContent='✅ 播放完成';
+    setTimeout(function(){btn.disabled=false;btn.style.opacity='1';st.textContent='点击重新播放';},500);
+  }).catch(function(){
+    // 方法2: SpeechSynthesis
+    try{
+      var msg=new SpeechSynthesisUtterance(text);
+      msg.lang='en-US';msg.rate=0.9;
+      msg.onend=function(){st.textContent='✅ 播放完成';btn.disabled=false;btn.style.opacity='1';};
+      speechSynthesis.speak(msg);
+      st.textContent='🔊 发音中...';
+    }catch(e){
+      st.textContent='❌ 当前浏览器不支持发音';
+      btn.disabled=false;btn.style.opacity='1';
+    }
+  });
+}
 </script>
 </body>
 </html>
