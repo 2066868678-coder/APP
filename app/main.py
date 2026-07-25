@@ -139,14 +139,27 @@ class WordBreakthroughApp:
         ]
 
         if 0 <= index < len(pages):
+            # 重建页面容器确保完全刷新
             self.page_container.content = pages[index]()
             self.nav_bar.selected_index = index
+            # 强制同步：先清空再更新
+            self.page_container.update()
             self.page.update()
 
     def show_about(self, e):
-        VERSION = "2.1.0"
-        VERSION_DATE = "2026-07-12"
+        VERSION = "2.2.0"
+        VERSION_DATE = "2026-07-25"
         CHANGES = (
+            "【2.2.0】2026-07-25\n"
+            "  - 三档熟悉程度：熟悉/模糊/不记得\n"
+            "  - 例句翻译默认隐藏，点击展开\n"
+            "  - 单词/搭配/例句一键发音（免费TTS）\n"
+            "  - 复习页展示固定搭配反推含义\n"
+            "  - 记忆方法/例句卡片顺序互换\n"
+            "  - 修复benefit/economic记忆方法\n"
+            "  - 单词列表显示更多信息\n"
+            "  - 当日计划完成后不再分配新词\n"
+            "  - 修复页面切换显示异常bug\n"
             "【2.1.0】2026-07-12\n"
             "  - UI全面美化（Teal主题+设计系统）\n"
             "  - 学习页增加剩余天数预估\n"

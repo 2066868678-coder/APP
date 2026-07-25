@@ -237,6 +237,10 @@ def get_today_words():
             ids = [int(x) for x in plan.word_ids_review.split(',') if x.strip()]
             review_words = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
 
+        # 今日计划已完成 → 不返回新词
+        if plan and plan.new_words_done and plan.new_words_target and plan.new_words_done >= plan.new_words_target:
+            new_words = []
+
         # 今日新词未锁定时：从本地算出并锁定
         if not new_words:
             studied = s.query(StudyRecord.word_id).distinct().all()
@@ -509,6 +513,28 @@ def get_study_data():
             s.add(plan)
             s.commit()
 
+        # 如果今日目标已完成，不再分配新词
+        done_count = plan.new_words_done or 0
+        target_count = plan.new_words_target or 20
+        if done_count >= target_count:
+            total = s.query(func.count(Word.id)).scalar() or 0
+            learned = s.query(StudyRecord.word_id).distinct().count()
+            mastered = s.query(StudyRecord.word_id).filter(
+                StudyRecord.review_interval >= 15,
+                StudyRecord.result == 'remember'
+            ).distinct().count()
+            return {
+                'words': [],
+                'target': target_count,
+                'done': done_count,
+                'daily_target': int(get_setting('daily_new_words_target', '20')),
+                'stats': {
+                    'total_words': total,
+                    'learned_words': learned,
+                    'mastered_words': mastered,
+                }
+            }
+
         # 今日新词
         new_words = []
         if plan.word_ids_new:
@@ -518,8 +544,8 @@ def get_study_data():
                 StudyRecord.word_id.in_(ids)).distinct().all())
             new_words = [w for w in all_nw if w.id not in studied_ids_set]
 
-        # 未锁定则锁定
-        if not new_words:
+        # 未锁定则锁定（仅在今日计划未完成时）
+        if not new_words and plan.new_words_done < plan.new_words_target:
             studied = s.query(StudyRecord.word_id).distinct().all()
             studied_ids = [r[0] for r in studied]
             q = s.query(Word)

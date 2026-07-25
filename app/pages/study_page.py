@@ -10,7 +10,7 @@
 4. 自评"记得"或"不记得"
 """
 
-import sys, os, threading
+import sys, os, threading, re, urllib.parse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import flet as ft
@@ -123,37 +123,65 @@ class StudyPage:
         ], spacing=0, tight=True)
 
     def _build_action_buttons(self):
-        """操作按钮区域（需在 _show_current_word 之前调用）"""
+        """操作按钮区域 — 三档熟悉程度"""
+        from app.theme import COLOR_REVIEW
         self.action_buttons = ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    content=ft.Column([
-                        ft.Icon(ft.Icons.CLOSE, color=ft.Colors.WHITE, size=22),
-                        ft.Text("忘记", color=ft.Colors.WHITE, size=14,
-                                weight=ft.FontWeight.BOLD),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                    padding=ft.Padding(36, 14, 36, 14),
-                    bgcolor=ERROR,
-                    border_radius=RADIUS_LG,
-                    ink=True,
-                    shadow=SHADOW_SM,
-                    on_click=lambda e: self._handle_result('forget'),
-                ),
-                ft.Container(
-                    content=ft.Column([
-                        ft.Icon(ft.Icons.CHECK, color=ft.Colors.WHITE, size=22),
-                        ft.Text("记得", color=ft.Colors.WHITE, size=14,
-                                weight=ft.FontWeight.BOLD),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                    padding=ft.Padding(36, 14, 36, 14),
-                    bgcolor=SUCCESS,
-                    border_radius=RADIUS_LG,
-                    ink=True,
-                    shadow=SHADOW_SM,
-                    on_click=lambda e: self._handle_result('remember'),
-                ),
-            ], alignment=ft.MainAxisAlignment.CENTER, spacing=24),
-            padding=ft.Padding(left=PAGE_PADDING, right=PAGE_PADDING, bottom=24),
+            content=ft.Column([
+                ft.Row([
+                    # 熟悉
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Icon(ft.Icons.STAR, color=ft.Colors.WHITE, size=20),
+                            ft.Text("熟悉", color=ft.Colors.WHITE, size=12,
+                                    weight=ft.FontWeight.BOLD),
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                        padding=ft.Padding(24, 10, 24, 10),
+                        bgcolor="#43A047",
+                        border_radius=RADIUS_LG,
+                        ink=True,
+                        shadow=SHADOW_SM,
+                        expand=True,
+                        tooltip="近期不再复习",
+                        on_click=lambda e: self._handle_result('familiar'),
+                    ),
+                    # 模糊
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Icon(ft.Icons.AUTO_AWESOME, color=ft.Colors.WHITE, size=20),
+                            ft.Text("模糊", color=ft.Colors.WHITE, size=12,
+                                    weight=ft.FontWeight.BOLD),
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                        padding=ft.Padding(24, 10, 24, 10),
+                        bgcolor=COLOR_REVIEW,
+                        border_radius=RADIUS_LG,
+                        ink=True,
+                        shadow=SHADOW_SM,
+                        expand=True,
+                        tooltip="正常艾宾浩斯复习",
+                        on_click=lambda e: self._handle_result('vague'),
+                    ),
+                    # 不记得
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Icon(ft.Icons.REPLAY, color=ft.Colors.WHITE, size=20),
+                            ft.Text("不记得", color=ft.Colors.WHITE, size=12,
+                                    weight=ft.FontWeight.BOLD),
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                        padding=ft.Padding(24, 10, 24, 10),
+                        bgcolor=ERROR,
+                        border_radius=RADIUS_LG,
+                        ink=True,
+                        shadow=SHADOW_SM,
+                        expand=True,
+                        tooltip="今天多练几次",
+                        on_click=lambda e: self._handle_result('forget'),
+                    ),
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                ft.Container(height=4),
+                ft.Text("点按下方按钮记录学习结果", size=11, color=TEXT_HINT,
+                        text_align=ft.TextAlign.CENTER),
+            ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.Padding(left=PAGE_PADDING, right=PAGE_PADDING, bottom=16),
             visible=False,
         )
         return self.action_buttons
@@ -220,7 +248,18 @@ class StudyPage:
                 ft.Container(expand=True),
                 ft.Text(wd['word'], size=FONT_DISPLAY, weight=ft.FontWeight.BOLD,
                         color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=12),
+                ft.Container(height=8),
+                # 发音按钮
+                ft.Container(
+                    content=ft.IconButton(
+                        icon=ft.Icons.VOLUME_UP,
+                        icon_size=28,
+                        icon_color=PRIMARY,
+                        tooltip="听发音",
+                        on_click=lambda e: self._speak(wd['word']),
+                    ),
+                ),
+                ft.Container(height=8),
                 # 音标胶囊
                 ft.Container(
                     content=ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
@@ -264,28 +303,25 @@ class StudyPage:
 
         sections = []
 
-        # === 基本信息区 ===
-        sections.append(self._section_basic(wd))
+        # === 基本信息区（带发音按钮） ===
+        sections.append(self._section_basic_with_audio(wd))
 
-        # === 例句 ===
-        if wd.get('examples'):
-            sections.append(self._section_info(
-                "例句", ft.Icons.FORMAT_QUOTE, wd['examples'],
-                "#F3E5F5", "#CE93D8",
-            ))
-
-        # === 记忆方法（高亮） ===
+        # === 记忆方法（高亮，放前面） ===
         if wd.get('memory_methods'):
-            sections.append(self._section_info(
+            sections.append(self._section_with_audio(
                 "记忆方法", ft.Icons.LIGHTBULB_OUTLINE, wd['memory_methods'],
-                "#FFF8E1", "#FFB300",
+                "#FFF8E1", "#FFB300", wd['word'],
             ))
 
-        # === 固定搭配 ===
+        # === 例句（点击显示翻译） ===
+        if wd.get('examples'):
+            sections.append(self._build_examples_section(wd['examples']))
+
+        # === 固定搭配（带发音） ===
         if wd.get('collocations'):
-            sections.append(self._section_info(
+            sections.append(self._section_with_audio(
                 "固定搭配", ft.Icons.LINK, wd['collocations'],
-                "#E3F2FD", "#64B5F6",
+                "#E3F2FD", "#64B5F6", wd['word'],
             ))
 
         # === 派生词/扩展 ===
@@ -309,12 +345,21 @@ class StudyPage:
         self.card_container.content = ft.Column([back], spacing=0, tight=True)
         self.page.update()
 
-    def _section_basic(self, wd):
-        """基本信息区 — 单词/音标/词性/释义"""
+    def _section_basic_with_audio(self, wd):
+        """基本信息区 — 单词/音标/词性/释义 + 发音按钮"""
         return ft.Container(
             content=ft.Column([
-                ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
-                        color=TEXT_PRIMARY),
+                ft.Row([
+                    ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY, expand=True),
+                    ft.IconButton(
+                        icon=ft.Icons.VOLUME_UP,
+                        icon_size=22,
+                        icon_color=PRIMARY,
+                        tooltip="听发音",
+                        on_click=lambda e: self._speak(wd['word']),
+                    ),
+                ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=4),
                 ft.Row([
                     ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
@@ -337,6 +382,118 @@ class StudyPage:
             border_radius=RADIUS_SM,
             border=ft.Border(
                 left=ft.BorderSide(3, PRIMARY),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
+        )
+
+    def _section_with_audio(self, title, icon, content, bg_color, accent_color, word):
+        """信息区 — 带发音按钮"""
+        items = [item.strip() for item in content.split('|') if item.strip()]
+        content_parts = []
+        for item in items:
+            content_parts.append(
+                ft.Row([
+                    ft.Container(
+                        content=ft.Text("• ", size=14, color=TEXT_HINT),
+                        width=16,
+                    ),
+                    ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START)
+            )
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(icon, size=16, color=accent_color),
+                    ft.Container(width=6),
+                    ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY, expand=True),
+                    ft.IconButton(
+                        icon=ft.Icons.VOLUME_UP,
+                        icon_size=16,
+                        icon_color=accent_color,
+                        tooltip="听发音",
+                        on_click=lambda e, w=word: self._speak(w),
+                    ),
+                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=6),
+                *content_parts,
+            ], spacing=0),
+            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+            bgcolor=bg_color,
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(3, accent_color),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
+        )
+
+    def _build_examples_section(self, examples_text):
+        """例句区 — 默认隐藏翻译，点击展开"""
+        pairs = self._split_en_zh(examples_text)
+
+        example_items = []
+        for i, (en, zh) in enumerate(pairs):
+            # 每条例句：英文 + 展开按钮 + (隐藏的翻译)
+            zh_row = ft.Container(
+                content=ft.Column([
+                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.2, "#CE93D8")),
+                    ft.Container(height=4),
+                    ft.Row([
+                        ft.Icon(ft.Icons.TRANSLATE, size=12, color="#CE93D8"),
+                        ft.Container(width=4),
+                        ft.Text(zh or "", size=FONT_BODY, color=TEXT_HINT, italic=True,
+                                expand=True),
+                    ]),
+                ], spacing=0),
+                visible=False,  # 默认隐藏翻译
+            )
+
+            example_items.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Text(f"{i+1}. ", size=FONT_BODY, color=TEXT_HINT,
+                                    weight=ft.FontWeight.BOLD),
+                            ft.Text(en, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                            ft.IconButton(
+                                icon=ft.Icons.EXPAND_MORE,
+                                icon_size=16,
+                                icon_color="#CE93D8",
+                                tooltip="显示/隐藏翻译",
+                            ),
+                        ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.START),
+                        ft.Container(height=2),
+                        zh_row,
+                    ], spacing=0),
+                    padding=ft.Padding(left=4, top=6, right=4, bottom=6),
+                    ink=True,
+                    on_click=self._toggle_translation,
+                )
+            )
+
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.FORMAT_QUOTE, size=16, color="#CE93D8"),
+                    ),
+                    ft.Container(width=6),
+                    ft.Text("例句", size=FONT_BODY, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY, expand=True),
+                    ft.Text("点击展开翻译", size=11, color=TEXT_HINT, italic=True),
+                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=4),
+                *example_items,
+            ], spacing=0),
+            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+            bgcolor="#F3E5F5",
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(3, "#CE93D8"),
                 right=ft.BorderSide(0, None),
                 top=ft.BorderSide(0, None),
                 bottom=ft.BorderSide(0, None),
@@ -367,23 +524,96 @@ class StudyPage:
             ),
         )
 
-    def _handle_result(self, result):
+    # ========== 发音功能 ==========
+    def _get_tts_url(self, text):
+        """获取免费Google TTS发音URL"""
+        return f"https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q={urllib.parse.quote(text)}"
+
+    def _speak(self, text):
+        """播放发音"""
+        self.page.launch_url(self._get_tts_url(text))
+
+    # ========== 例句拆分：英文+中文 ==========
+    def _split_en_zh(self, text):
+        """将例句拆分为英文部分和中文翻译"""
+        items = [t.strip() for t in text.split('|') if t.strip()]
+        result = []
+        for item in items:
+            # 找到中文字符起始位置
+            match = re.search(r'[一-鿿]', item)
+            if match:
+                en = item[:match.start()].strip()
+                zh = item[match.start():].strip()
+                result.append((en, zh))
+            else:
+                result.append((item, None))
+        return result
+
+    def _toggle_translation(self, e):
+        """点击例句切换翻译显示/隐藏"""
+        col = e.control.content
+        if col and isinstance(col, ft.Column) and len(col.controls) >= 3:
+            # col.controls: [en_row, spacer, zh_row]
+            zh_row = col.controls[2]
+            if isinstance(zh_row, ft.Container):
+                zh_row.visible = not zh_row.visible
+                # 更新箭头图标
+                en_row = col.controls[0]
+                if len(en_row.controls) >= 3:
+                    arrow = en_row.controls[2]
+                    arrow.name = ft.Icons.EXPAND_LESS if zh_row.visible else ft.Icons.EXPAND_MORE
+                    arrow.update()
+                zh_row.update()
+                if hasattr(e.control, 'page') and e.control.page:
+                    e.control.page.update()
+
+    # ========== 熟悉程度处理 ==========
+    def _handle_result(self, level):
+        """处理学习结果（3级熟悉程度）
+        level: 'familiar' 熟悉 / 'vague' 模糊 / 'forget' 不记得
+        """
         wd = self._get_word()
         if not wd:
             return
-        threading.Thread(target=lambda: api_service.record_study(
-            wd.get('id', 0), 'new', result), daemon=True).start()
 
-        if result == 'remember':
+        word_id = wd.get('id', 0)
+
+        if level == 'familiar':
+            # 熟悉 → 设review_interval=60天，近期不再复习
+            api_service.record_study(word_id, 'new', 'remember')
+            # 手动覆盖为60天
+            from app.services.local_db import _get_session
+            from backend.models import StudyRecord
+            s = _get_session()
+            try:
+                last = s.query(StudyRecord).filter(
+                    StudyRecord.word_id == word_id
+                ).order_by(StudyRecord.id.desc()).first()
+                if last:
+                    last.review_interval = 60
+                    s.commit()
+            except:
+                s.rollback()
+            finally:
+                s.close()
             self.new_words_done += 1
             self._next_word()
-            self.app.show_snackbar("✅ 已记住！按艾宾浩斯安排下次复习")
-        else:
-            word_id = wd.get('id', 0)
+            self.app.show_snackbar("⭐ 已标记为熟悉，近期不再复习")
+
+        elif level == 'vague':
+            # 模糊 → 正常艾宾浩斯
+            api_service.record_study(word_id, 'new', 'remember')
+            self.new_words_done += 1
+            self._next_word()
+            self.app.show_snackbar("✅ 模糊记得，按艾宾浩斯安排复习")
+
+        else:  # forget
+            # 不记得 → 重置间隔 + 今日多次出现
+            api_service.record_study(word_id, 'new', 'forget')
             if word_id not in self.remaining_queue:
                 self.remaining_queue.append(word_id)
             self._next_word()
-            self.app.show_snackbar("💪 会再出现的！今天多练几次", ERROR)
+            self.app.show_snackbar("💪 不记得！等会再出现，多看几次", ERROR)
 
     def _next_word(self):
         self.word_index += 1
@@ -406,6 +636,7 @@ class StudyPage:
         if not self.words or self.word_index >= len(self.words):
             return None
         return self.words[self.word_index]
+
 
     def _update_progress(self, initial=False):
         fresh_target = max(1, self._fresh_target)

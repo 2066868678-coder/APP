@@ -298,35 +298,80 @@ class StatisticsPage:
         learned = [w for w in words if w['studied']]
         unlearned = [w for w in words if not w['studied']]
 
-        def make_rows(items, limit=100):
+        def make_rows(items, limit=200):
             rows = []
             for w in items[:limit]:
-                rows.append(ft.Row([
-                    ft.Container(
-                        width=6, height=6,
-                        bgcolor=SUCCESS if w['studied'] else TEXT_HINT,
-                        border_radius=3,
+                # 获取章节简称
+                ch = w.get('chapter', '') or ''
+                ph = w.get('phonetic', '') or ''
+                rows.append(ft.Container(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Container(
+                                width=6, height=6,
+                                bgcolor=SUCCESS if w['studied'] else TEXT_HINT,
+                                border_radius=3,
+                            ),
+                            ft.Container(width=6),
+                            ft.Text(w['word'], size=FONT_BODY, expand=1,
+                                    color=TEXT_PRIMARY, weight=ft.FontWeight.BOLD),
+                            ft.Text(ph, size=FONT_SM, color=TEXT_HINT, expand=1, italic=True),
+                            ft.Container(
+                                content=ft.Text(ch, size=10, color=ft.Colors.WHITE),
+                                padding=ft.Padding(4, 1, 4, 1),
+                                bgcolor=PRIMARY_LIGHT,
+                                border_radius=4,
+                            ) if ch else ft.Container(),
+                        ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Text(w.get('meaning', '')[:60], size=FONT_SM,
+                                color=TEXT_SECONDARY, max_lines=1),
+                    ], spacing=2),
+                    padding=ft.Padding(left=8, top=6, right=8, bottom=6),
+                    border=ft.Border(
+                        bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.06, TEXT_HINT)),
+                        left=ft.BorderSide(0, None),
+                        right=ft.BorderSide(0, None),
+                        top=ft.BorderSide(0, None),
                     ),
-                    ft.Container(width=8),
-                    ft.Text(w['word'], size=FONT_BODY, expand=2, color=TEXT_PRIMARY),
-                    ft.Text(w.get('meaning', '')[:30], size=FONT_SM,
-                            color=TEXT_SECONDARY, expand=3),
-                ], spacing=0))
+                    ink=True,
+                ))
+            if len(items) > limit:
+                rows.append(
+                    ft.Container(
+                        content=ft.Text(f"... 还有 {len(items) - limit} 个单词",
+                                       size=FONT_SM, color=TEXT_HINT,
+                                       text_align=ft.TextAlign.CENTER),
+                        padding=ft.Padding(top=8, bottom=8),
+                    )
+                )
             return rows
 
         segments = []
-        segments.append(ft.Text(f'已学习 ({len(learned)})', size=FONT_LG,
-                                weight=ft.FontWeight.BOLD, color=SUCCESS))
+        segments.append(ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.CHECK_CIRCLE, size=18, color=SUCCESS),
+                ft.Container(width=6),
+                ft.Text(f'已学习 ({len(learned)})', size=FONT_LG,
+                        weight=ft.FontWeight.BOLD, color=SUCCESS),
+            ]),
+            padding=ft.Padding(top=8, bottom=4),
+        ))
         if learned:
-            segments.extend(make_rows(learned, 80))
+            segments.extend(make_rows(learned, 100))
             segments.append(ft.Container(height=8))
         else:
             segments.append(ft.Text('暂无', color=TEXT_SECONDARY, size=13))
-        segments.append(ft.Divider())
-        segments.append(ft.Text(f'未学习 ({len(unlearned)})', size=FONT_LG,
-                                weight=ft.FontWeight.BOLD, color=TEXT_HINT))
+        segments.append(ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.HOURGLASS_EMPTY, size=18, color=TEXT_HINT),
+                ft.Container(width=6),
+                ft.Text(f'未学习 ({len(unlearned)})', size=FONT_LG,
+                        weight=ft.FontWeight.BOLD, color=TEXT_HINT),
+            ]),
+            padding=ft.Padding(top=4, bottom=4),
+        ))
         if unlearned:
-            segments.extend(make_rows(unlearned, 80))
+            segments.extend(make_rows(unlearned, 100))
         else:
             segments.append(ft.Text('暂无', color=TEXT_SECONDARY, size=13))
 
@@ -334,7 +379,7 @@ class StatisticsPage:
             title=ft.Text(f'总单词列表 ({len(words)}词)'),
             content=ft.Container(
                 content=ft.Column(segments, scroll=ft.ScrollMode.AUTO),
-                width=360, height=480,
+                width=380, height=500,
             ),
             actions=[ft.TextButton('关闭',
                       on_click=lambda e: self._close_dlg(dlg))],
