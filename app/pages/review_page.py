@@ -499,28 +499,22 @@ class ReviewPage:
         )
 
     # ========== 发音 & 翻译辅助 ==========
-    def _get_tts_url(self, text):
-        return f"https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q={urllib.parse.quote(text)}"
-
     def _speak(self, text):
-        """使用浏览器内置语音合成发音（免费离线）"""
-        escaped = text.replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n')
-        html = (
-            '<html><head><meta charset="utf-8"><title>发音</title></head><body>'
-            '<p style="font-family:sans-serif;text-align:center;padding-top:40vh;color:#999;">'
-            '🔊 发音中...</p>'
-            '<script>'
-            'var msg=new SpeechSynthesisUtterance("' + escaped + '");'
-            'msg.lang="en-US";msg.rate=0.9;'
-            'speechSynthesis.speak(msg);'
-            'setTimeout(function(){window.close()},3000);'
-            '</script></body></html>'
-        )
-        self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
+        """播放发音 - 使用有道词典（国内可用）"""
         try:
-            self.page.clipboard = text
-        except:
-            pass
+            import urllib.request, io, base64
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                audio_bytes = resp.read()
+            if audio_bytes:
+                b64 = base64.b64encode(audio_bytes).decode()
+                self.page.launch_url(f"data:audio/mp3;base64,{b64}")
+        except Exception:
+            try:
+                self.page.launch_url(f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2")
+            except:
+                pass
 
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]
