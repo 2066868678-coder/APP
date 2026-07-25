@@ -542,10 +542,16 @@ class StudyPage:
 
     # ========== 发音功能 ==========
     def _speak(self, text):
-        """播放发音 - 通过本地服务器中转（国内可用）"""
+        """播放发音 - 服务端获取音频后 inline 播放"""
         try:
-            url = f"/tts?text={urllib.parse.quote(text)}"
-            self.page.launch_url(url)
+            import urllib.request, base64
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                audio = resp.read()
+            if audio and len(audio) > 100:
+                b64 = base64.b64encode(audio).decode()
+                self.page.launch_url(f"data:audio/mp3;base64,{b64}")
         except Exception as ex:
             self.app.show_snackbar(f"发音失败: {ex}")
 

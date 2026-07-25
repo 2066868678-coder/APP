@@ -140,34 +140,4 @@ if __name__ == '__main__':
         print("按 Ctrl+C 停止")
         print("=" * 50)
         port = int(os.getenv("PORT", 8551))
-        # 自定义FastAPI + 发音接口
-        from flet.fastapi import FastAPI as FletFastAPI, FletApp
-        from fastapi.responses import Response
-        import urllib.request, asyncio, threading, concurrent.futures
-
-        _tts_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-
-        tts_fastapi = FletFastAPI()
-
-        @tts_fastapi.get("/tts")
-        async def tts_audio(text: str):
-            try:
-                url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-                loop = asyncio.get_running_loop()
-                audio = await loop.run_in_executor(_tts_executor, lambda: urllib.request.urlopen(
-                    urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'}), timeout=8).read())
-                return Response(content=audio, media_type="audio/mpeg")
-            except Exception:
-                return Response(status_code=502, content="获取发音失败")
-
-        _flet_loop = asyncio.new_event_loop()
-        _flet_app = FletApp(
-            loop=_flet_loop,
-            executor=concurrent.futures.ThreadPoolExecutor(max_workers=2),
-            main=main,
-            before_main=None,
-        )
-        tts_fastapi.mount("/", _flet_app)
-
-        import uvicorn
-        uvicorn.run(tts_fastapi, host="0.0.0.0", port=port)
+        ft.run(main=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=port)
