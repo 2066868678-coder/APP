@@ -153,12 +153,14 @@ def _run_web(port):
         js_parts = []
         if eng:
             js_parts.append(f"""
+total++;
 var u1=new SpeechSynthesisUtterance('{eng}');
-u1.lang='en-US';u1.rate=0.9;speechSynthesis.speak(u1);""")
+u1.lang='en-US';u1.rate=0.9;u1.onend=checkDone;speechSynthesis.speak(u1);""")
         if chn:
             js_parts.append(f"""
+total++;
 var u2=new SpeechSynthesisUtterance('{chn}');
-u2.lang='zh-CN';u2.rate=0.9;speechSynthesis.speak(u2);""")
+u2.lang='zh-CN';u2.rate=0.9;u2.onend=checkDone;speechSynthesis.speak(u2);""")
 
         speech_js = '\n'.join(js_parts)
 
@@ -166,13 +168,12 @@ u2.lang='zh-CN';u2.rate=0.9;speechSynthesis.speak(u2);""")
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 </head><body style="margin:0">
 <script>
-{speech_js}
-setTimeout(function(){{
+var done=0,total=0;
+function checkDone(){{done++;if(done>=total){{
   window.close();
-  setTimeout(function(){{
-    window.location.href=window.location.origin+'/';
-  }},300);
-}},8000);
+  setTimeout(function(){{window.location.href=window.location.origin+'/';}},200);
+}}}}
+{speech_js}
 </script></body></html>"""
         return html
 
