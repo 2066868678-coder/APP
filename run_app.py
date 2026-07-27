@@ -143,26 +143,39 @@ def _run_web(port):
 
     @app.get("/pronounce", response_class=HTMLResponse)
     async def pronounce(text: str = Query(...)):
-        """HTML页面：分离中英文分别朗读，读完自动返回App"""
+        """HTML页面：按顺序朗读中英文段落，读完自动返回App"""
         safe = text.replace('\\', '\\\\').replace("'", "\\'")
 
-        # 分离英文和中文
-        eng = re.sub(r'[一-鿿]+', '', safe).strip()
-        chn = ''.join(re.findall(r'[一-鿿]+', safe))
+        # 按顺序提取中英文段落：原文本中交替出现的中英文片段
+        segments = re.findall(r'[a-zA-Z][a-zA-Z\'\s\-.,!?;:]*|[一-鿿]+', safe)
+        segments = [s.strip() for s in segments if s.strip()]
 
-        js_parts = []
-        if eng:
-            js_parts.append(f"""
-total++;
-var u1=new SpeechSynthesisUtterance('{eng}');
-u1.lang='en-US';u1.rate=0.9;u1.onend=checkDone;speechSynthesis.speak(u1);""")
-        if chn:
-            js_parts.append(f"""
-total++;
-var u2=new SpeechSynthesisUtterance('{chn}');
-u2.lang='zh-CN';u2.rate=0.9;u2.onend=checkDone;speechSynthesis.speak(u2);""")
+        if not segments:
+            # 纯中文（无英文）或纯英文（无中文）
+            has_cn = bool(re.findall(r'[一-鿿]', safe))
+            lang = 'zh-CN' if has_cn else 'en-US'
+            segments = [safe]
+            lang_override = lang
+        else:
+            lang_override = None
 
-        speech_js = '\n'.join(js_parts)
+        # 构建按onend链式调用的JS（读一段→再读下一段，不靠浏览器队列）
+        chain_js = []
+        for i, seg in enumerate(segments):
+            has_cn = bool(re.findall(r'[一-鿿]', seg))
+            lang = lang_override if lang_override else ('zh-CN' if has_cn else 'en-US')
+            is_last = (i == len(segments) - 1)
+            onend = 'checkDone()' if is_last else f'speakSeg({i+1})'
+            seg_escaped = seg.replace("'", "\\'")
+            chain_js.append(f"""function speakSeg({i}){{
+var u=new SpeechSynthesisUtterance('{seg_escaped}');
+u.lang='{lang}';u.rate=0.9;
+u.onend=function(){{{onend}}};
+speechSynthesis.speak(u);
+}}""")
+        chain_js.append(f"speakSeg(0)")
+
+        speech_js = '\n'.join(chain_js)
 
         display_text = safe[:300]
         html = f"""<!DOCTYPE html>
@@ -181,11 +194,10 @@ body{{margin:0;display:flex;align-items:center;justify-content:center;min-height
 <div class="hint">🔊 播放中，读完后自动返回...</div>
 </div>
 <script>
-var done=0,total=0;
-function checkDone(){{done++;if(done>=total){{
+function checkDone(){{
   window.close();
   setTimeout(function(){{window.location.href=window.location.origin+'/';}},200);
-}}}}
+}}
 {speech_js}
 </script></body></html>"""
         return html

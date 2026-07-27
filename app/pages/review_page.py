@@ -6,7 +6,7 @@
 艾宾浩斯遗忘曲线复习
 """
 
-import sys, os, threading, re, urllib.parse
+import sys, os, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import flet as ft
