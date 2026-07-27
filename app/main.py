@@ -16,9 +16,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import urllib.parse
-import urllib.request
 import flet as ft
-import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -52,9 +50,6 @@ class WordBreakthroughApp:
 
         # 页面索引
         self.current_index = 0
-
-        # 音频播放器（延迟初始化）
-        self._audio_player = None
 
         # 构建UI
         self.build_ui()
@@ -207,51 +202,41 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — flet-audio 内联播放，不弹窗不跳转"""
+        """播放发音 — 浏览器 SpeechSynthesis，弹窗自动关闭"""
         if not text or not text.strip():
             return
         word = text.strip()
 
-        # 服务端抓取TTS音频（避开浏览器的CORS限制）
-        mp3_bytes = self._fetch_tts(word)
-        if not mp3_bytes:
-            return
+        # 检测语言：含中文就用中文语音
+        has_cn = any('一' <= c <= '鿿' for c in word)
+        lang = 'zh-CN' if has_cn else 'en-US'
 
-        # 创建或复用隐藏音频播放器
-        if self._audio_player is None:
-            self._audio_player = fta.Audio(
-                src=mp3_bytes,
-                autoplay=True,
-                volume=1.0,
-                release_mode=fta.ReleaseMode.RELEASE,
+        # 转义 JavaScript 字符串
+        safe = word.replace('\\', '\\\\').replace("'", "\\'").replace('"', '\\"')
+
+        # 最小化 HTML：朗读后自动关闭窗口
+        html = (
+            "<script>"
+            f"var u=new SpeechSynthesisUtterance('{safe}');"
+            f"u.lang='{lang}';"
+            "u.rate=0.9;"
+            "u.onend=function(){window.close()};"
+            "setTimeout(function(){window.close()},8000);"  # 8秒超时保护
+            "speechSynthesis.speak(u);"
+            "</script>"
+        )
+
+        # 开小窗朗读（播完自动关），失败则直接打开
+        try:
+            self.page.launch_url(
+                "data:text/html," + urllib.parse.quote(html),
+                web_popup_window=True,
+                web_popup_window_name="_tts",
+                web_popup_window_width=100,
+                web_popup_window_height=100,
             )
-            self.page.overlay.append(self._audio_player)
-        else:
-            self._audio_player.pause()
-            self._audio_player.src = mp3_bytes
-            self._audio_player.play()
-        self.page.update()
-
-    def _fetch_tts(self, word):
-        """从网络获取TTS音频字节（有道主用 + Google备用）"""
-        encoded = urllib.parse.quote(word)
-        sources = [
-            f"https://dict.youdao.com/dictvoice?audio={encoded}&type=0",
-            f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={encoded}",
-        ]
-        for url in sources:
-            try:
-                req = urllib.request.Request(
-                    url,
-                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    data = resp.read()
-                if data and len(data) > 200:
-                    return data
-            except Exception:
-                continue
-        return None
+        except Exception:
+            self.page.launch_url("data:text/html," + urllib.parse.quote(html))
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
