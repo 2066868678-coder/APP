@@ -11,16 +11,12 @@
 
 import sys
 import os
-import asyncio
-import tempfile
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import urllib.parse
-import httpx
 import flet as ft
-import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -52,12 +48,7 @@ class WordBreakthroughApp:
         self.statistics_page = StatisticsPage(self)
         self.settings_page = SettingsPage(self)
 
-        # 全局音频播放器（仅用于网络降级）
-        self._audio_player = fta.Audio(src="", volume=1.0)
-        page.services.append(self._audio_player)
-        self._audio_busy = False  # 防重复发音锁
-
-        # 当前页面索引
+        # 页面索引
         self.current_index = 0
 
         # 构建UI
@@ -211,98 +202,19 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放单词发音（离线 TTS，无需网络）"""
+        """播放发音 — 浏览器内置语音，零依赖零卡顿"""
         if not text or not text.strip():
             return
-        if self._audio_busy:
-            self.show_snackbar("正在发音，请稍候...")
-            return
-        self._audio_busy = True
-        self.page.run_task(self._play_audio_async, text.strip())
-
-    async def _play_audio_async(self, text):
-        """用 winsound（Windows 原生 API）播放，完全绕过 flet_audio"""
-        print(f"🔊 _play_audio_async: text='{text}'")
-        try:
-            loop = asyncio.get_running_loop()
-            print(f"🔊  submitting to executor...")
-            await loop.run_in_executor(None, self._speak_offline, text.strip())
-            print(f"✅ 发音成功: {text}")
-        except Exception as e:
-            print(f"❌ 离线发音失败 [{text}]: {type(e).__name__}: {e}")
-            await self._play_network_fallback(text)
-        finally:
-            self._audio_busy = False
-            print(f"🔊 _audio_busy released")
-
-    def _speak_offline(self, text):
-        """【子线程】新建 TTS 引擎 → 生成 WAV → winsound 播放"""
-        import pyttsx3
-        import winsound
-
-        print(f"🔊 _speak_offline start: '{text}'")
-        engine = pyttsx3.init()
-        print(f"🔊  engine initialized")
-        try:
-            tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
-            tmp.close()
-            print(f"🔊  tmp file: {tmp.name}")
-            try:
-                engine.save_to_file(text, tmp.name)
-                engine.runAndWait()
-                file_size = os.path.getsize(tmp.name)
-                print(f"🔊  WAV generated: {file_size} bytes")
-                if file_size > 100:
-                    winsound.PlaySound(tmp.name, winsound.SND_FILENAME)
-                    print(f"🔊  winsound.PlaySound done")
-                else:
-                    print(f"❌  WAV file too small")
-            finally:
-                self._try_cleanup(tmp.name)
-        finally:
-            try:
-                engine.stop()
-            except Exception:
-                pass
-        print(f"🔊 _speak_offline end")
-
-    def _try_cleanup(self, path):
-        """安全删除临时文件"""
-        try:
-            if path and os.path.exists(path):
-                os.unlink(path)
-        except Exception:
-            pass
-
-    async def _play_network_fallback(self, text):
-        """网络 TTS 降级（多源轮询）"""
-        encoded = urllib.parse.quote(text)
-        sources = [
-            f"https://dict.youdao.com/dictvoice?audio={encoded}&type=2",
-            f"https://translate.google.com/translate_tts?tl=en&client=tw-ob&q={encoded}",
-        ]
-        for url in sources:
-            try:
-                async with httpx.AsyncClient(timeout=5) as c:
-                    r = await c.get(url)
-                if r.status_code == 200 and r.content:
-                    # 存临时文件再播放
-                    tmp = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
-                    tmp.write(r.content)
-                    p = tmp.name
-                    tmp.close()
-                    self._audio_player.src = p
-                    self._audio_player.update()
-                    await asyncio.sleep(0.15)
-                    await self._audio_player.play()
-                    print(f"✅ 网络发音成功: {text}")
-                    asyncio.get_event_loop().call_later(30,
-                        lambda pp=p: self._try_cleanup(pp))
-                    return
-            except Exception as e:
-                print(f"  网络源失败: {e}")
-                continue
-        self.show_snackbar("发音失败，请检查系统语音设置", ERROR)
+        safe = text.strip().replace("'", "\\'").replace('"', '\\"')
+        # 浏览器 SpeechSynthesis API，不联网、不装包、不卡顿
+        html = (
+            "<script>"
+            f"var u=new SpeechSynthesisUtterance('{safe}');"
+            f"u.lang='en-US';u.rate=0.9;"
+            f"speechSynthesis.speak(u);"
+            "</script>"
+        )
+        self.page.launch_url("data:text/html," + urllib.parse.quote(html))
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
