@@ -11,6 +11,9 @@
 
 import sys
 import os
+import asyncio
+import tempfile
+import threading
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,6 +22,7 @@ import urllib.parse
 import httpx
 import flet as ft
 import flet_audio as fta
+import pyttsx3
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -50,10 +54,12 @@ class WordBreakthroughApp:
         self.statistics_page = StatisticsPage(self)
         self.settings_page = SettingsPage(self)
 
-        # 全局音频播放器
+        # 全局音频播放器 + 离线 TTS 引擎
         self._audio_player = fta.Audio(src="", volume=1.0)
         page.services.append(self._audio_player)
         self._audio_busy = False  # 防重复发音锁
+        self._tts_engine = None
+        self._tts_lock = threading.Lock()
 
         # 当前页面索引
         self.current_index = 0
@@ -208,8 +214,16 @@ class WordBreakthroughApp:
         dlg.open = False
         self.page.update()
 
+    def _get_tts(self):
+        """懒初始化 TTS 引擎（线程安全）"""
+        if self._tts_engine is None:
+            with self._tts_lock:
+                if self._tts_engine is None:  # double-check
+                    self._tts_engine = pyttsx3.init()
+        return self._tts_engine
+
     def play_audio(self, text):
-        """播放单词发音（入口，异步调度）"""
+        """播放单词发音（离线 TTS，无需网络）"""
         if not text or not text.strip():
             return
         if self._audio_busy:
@@ -219,36 +233,78 @@ class WordBreakthroughApp:
         self.page.run_task(self._play_audio_async, text.strip())
 
     async def _play_audio_async(self, text):
-        """服务端拉取音频 → 直接传入原始字节播放"""
+        """用 pyttsx3 生成 WAV → 从文件播放（完全离线）"""
+        tmp_path = None
         try:
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(url)
-            if resp.status_code != 200:
-                print(f"发音API返回HTTP {resp.status_code}")
-                self.show_snackbar(f"发音失败（HTTP {resp.status_code}）", ERROR)
-                return
-            if not resp.content:
-                print(f"发音API返回空数据")
-                self.show_snackbar("发音失败（无音频数据）", ERROR)
-                return
+            # 在子线程中生成语音文件（pyttsx3 是同步的）
+            loop = asyncio.get_event_loop()
+            tmp_path = await loop.run_in_executor(None, self._tts_to_file, text)
 
-            # 直接传入原始 MP3 字节（fta.Audio.src 支持 bytes 类型）
-            self._audio_player.src = resp.content  # ← 关键修复：bytes 而非 data URI
+            # 从文件路径播放（比 bytes / data URI 稳定得多）
+            self._audio_player.src = tmp_path
             self._audio_player.update()
+            await asyncio.sleep(0.15)  # 给 Flutter 时间加载文件
             await self._audio_player.play()
-            print(f"发音成功: {text}")
-        except httpx.TimeoutException:
-            print(f"发音请求超时 [{text}]")
-            self.show_snackbar("发音请求超时，请检查网络", ERROR)
-        except httpx.ConnectError:
-            print(f"发音网络错误 [{text}]")
-            self.show_snackbar("网络连接失败，请检查网络", ERROR)
+            print(f"✅ 发音成功: {text}")
+
+            # 30 秒后清理临时文件
+            asyncio.get_event_loop().call_later(30,
+                lambda p=tmp_path: self._try_cleanup(p))
         except Exception as e:
-            print(f"发音失败 [{text}]: {e}")
-            self.show_snackbar("发音失败，请稍后重试", ERROR)
+            print(f"❌ 离线发音失败 [{text}]: {e}")
+            if tmp_path:
+                self._try_cleanup(tmp_path)
+            # 降级：尝试网络拉取
+            await self._play_network_fallback(text)
         finally:
             self._audio_busy = False
+
+    def _tts_to_file(self, text):
+        """同步：用系统 TTS 生成临时 WAV 文件"""
+        engine = self._get_tts()
+        tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+        tmp.close()
+        engine.save_to_file(text, tmp.name)
+        engine.runAndWait()
+        return tmp.name
+
+    def _try_cleanup(self, path):
+        """安全删除临时文件"""
+        try:
+            if path and os.path.exists(path):
+                os.unlink(path)
+        except Exception:
+            pass
+
+    async def _play_network_fallback(self, text):
+        """网络 TTS 降级（多源轮询）"""
+        encoded = urllib.parse.quote(text)
+        sources = [
+            f"https://dict.youdao.com/dictvoice?audio={encoded}&type=2",
+            f"https://translate.google.com/translate_tts?tl=en&client=tw-ob&q={encoded}",
+        ]
+        for url in sources:
+            try:
+                async with httpx.AsyncClient(timeout=5) as c:
+                    r = await c.get(url)
+                if r.status_code == 200 and r.content:
+                    # 存临时文件再播放
+                    tmp = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
+                    tmp.write(r.content)
+                    p = tmp.name
+                    tmp.close()
+                    self._audio_player.src = p
+                    self._audio_player.update()
+                    await asyncio.sleep(0.15)
+                    await self._audio_player.play()
+                    print(f"✅ 网络发音成功: {text}")
+                    asyncio.get_event_loop().call_later(30,
+                        lambda pp=p: self._try_cleanup(pp))
+                    return
+            except Exception as e:
+                print(f"  网络源失败: {e}")
+                continue
+        self.show_snackbar("发音失败，请检查系统语音设置", ERROR)
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
