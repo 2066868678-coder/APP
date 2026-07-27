@@ -159,21 +159,21 @@ def _run_web(port):
         else:
             lang_override = None
 
-        # 构建按onend链式调用的JS（读一段→再读下一段，不靠浏览器队列）
+        # 构建链式朗读JS（函数名用 s0 s1 s2... 避免数字做函数名）
         chain_js = []
         for i, seg in enumerate(segments):
             has_cn = bool(re.findall(r'[一-鿿]', seg))
             lang = lang_override if lang_override else ('zh-CN' if has_cn else 'en-US')
             is_last = (i == len(segments) - 1)
-            onend = 'checkDone()' if is_last else f'speakSeg({i+1})'
+            onend = 'checkDone()' if is_last else f's{i+1}()'
             seg_escaped = seg.replace("'", "\\'")
-            chain_js.append(f"""function speakSeg({i}){{
+            chain_js.append(f"""function s{i}(){{
 var u=new SpeechSynthesisUtterance('{seg_escaped}');
 u.lang='{lang}';u.rate=0.9;
 u.onend=function(){{{onend}}};
 speechSynthesis.speak(u);
 }}""")
-        chain_js.append(f"speakSeg(0)")
+        chain_js.append("s0()")
 
         speech_js = '\n'.join(chain_js)
 
