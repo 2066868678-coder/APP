@@ -164,9 +164,22 @@ u2.lang='zh-CN';u2.rate=0.9;u2.onend=checkDone;speechSynthesis.speak(u2);""")
 
         speech_js = '\n'.join(js_parts)
 
+        display_text = safe[:300]
         html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-</head><body style="margin:0">
+<style>
+body{{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:#f5f5f5;font-family:sans-serif;padding:20px;box-sizing:border-box;}}
+.box{{background:white;border-radius:20px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.1);
+  max-width:90%;word-break:break-word;}}
+.word{{font-size:28px;line-height:1.6;color:#333;text-align:center;}}
+.hint{{margin-top:20px;font-size:14px;color:#999;text-align:center;}}
+</style>
+</head><body>
+<div class="box">
+<div class="word">{display_text}</div>
+<div class="hint">🔊 播放中，读完后自动返回...</div>
+</div>
 <script>
 var done=0,total=0;
 function checkDone(){{done++;if(done>=total){{
