@@ -15,8 +15,11 @@ import os
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import re
 import urllib.parse
+import urllib.request
 import flet as ft
+import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -50,6 +53,9 @@ class WordBreakthroughApp:
 
         # 页面索引
         self.current_index = 0
+
+        # 音频播放器（延迟初始化）
+        self._audio_player = None
 
         # 构建UI
         self.build_ui()
@@ -202,28 +208,49 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 浏览器 SpeechSynthesis，支持中英文，播完自动关"""
+        """播放发音 — 服务端抓取音频 + flet-audio内联播放"""
         if not text or not text.strip():
             return
+
+        # 分离中英文（有道TBS不能同时处理中英混合）
         word = text.strip()
+        eng = re.sub(r'[一-鿿]+', '', word).strip()
+        chn = ''.join(re.findall(r'[一-鿿]+', word))
 
-        # 检测语言：含中文就用中文语音
-        has_cn = any('一' <= c <= '鿿' for c in word)
-        lang = 'zh-CN' if has_cn else 'en-US'
+        # 1) 有英文 → 有道美式英语 type=0
+        mp3 = None
+        if eng:
+            mp3 = self._fetch_tts(eng, 0)
+        # 2) 纯中文 → 有道普通话 type=2
+        if not mp3 and chn and not eng:
+            mp3 = self._fetch_tts(chn, 2)
+        if not mp3:
+            return
 
-        # 转义 JavaScript 字符串（不能漏掉反斜杠转义，避免引号破坏语法）
-        safe = word.replace('\\', '\\\\').replace("'", "\\'")
+        # 复用或创建播放器
+        if self._audio_player is None:
+            self._audio_player = fta.Audio(src=mp3)
+            self.page.overlay.append(self._audio_player)
+        else:
+            self._audio_player.src = mp3
+        self.page.update()
+        # 异步播放（必须用page.run_task，play()是async方法）
+        self.page.run_task(self._audio_player.play)
 
-        # 浏览器原生 SpeechSynthesis：全文本朗读，播完自动关标签页
-        html = (
-            "<script>"
-            f"var u=new SpeechSynthesisUtterance('{safe}');"
-            f"u.lang='{lang}';u.rate=0.9;"
-            "u.onend=function(){setTimeout(function(){window.close()},200)};"
-            "speechSynthesis.speak(u);"
-            "</script>"
-        )
-        self.page.launch_url("data:text/html," + urllib.parse.quote(html))
+    def _fetch_tts(self, text, type_):
+        """从有道词典获取TTS音频字节"""
+        url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type={type_}"
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            })
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = r.read()
+            if data and len(data) > 300:
+                return data
+        except Exception:
+            pass
+        return None
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
