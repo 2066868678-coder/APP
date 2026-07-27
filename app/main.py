@@ -16,6 +16,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import urllib.parse
+import httpx
 import flet as ft
 import flet_audio as fta
 from app.theme import (
@@ -52,6 +53,7 @@ class WordBreakthroughApp:
         # 全局音频播放器
         self._audio_player = fta.Audio(src="", volume=1.0)
         page.services.append(self._audio_player)
+        self._audio_busy = False  # 防重复发音锁
 
         # 当前页面索引
         self.current_index = 0
@@ -207,14 +209,46 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放单词发音（内嵌音频，不弹新页面）"""
+        """播放单词发音（入口，异步调度）"""
+        if not text or not text.strip():
+            return
+        if self._audio_busy:
+            self.show_snackbar("正在发音，请稍候...")
+            return
+        self._audio_busy = True
+        self.page.run_task(self._play_audio_async, text.strip())
+
+    async def _play_audio_async(self, text):
+        """服务端拉取音频 → 直接传入原始字节播放"""
         try:
             url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type=2"
-            self._audio_player.src = url
-            self._audio_player.volume = 1.0
-            self.page.run_task(self._audio_player.play)
-        except Exception:
-            pass
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(url)
+            if resp.status_code != 200:
+                print(f"发音API返回HTTP {resp.status_code}")
+                self.show_snackbar(f"发音失败（HTTP {resp.status_code}）", ERROR)
+                return
+            if not resp.content:
+                print(f"发音API返回空数据")
+                self.show_snackbar("发音失败（无音频数据）", ERROR)
+                return
+
+            # 直接传入原始 MP3 字节（fta.Audio.src 支持 bytes 类型）
+            self._audio_player.src = resp.content  # ← 关键修复：bytes 而非 data URI
+            self._audio_player.update()
+            await self._audio_player.play()
+            print(f"发音成功: {text}")
+        except httpx.TimeoutException:
+            print(f"发音请求超时 [{text}]")
+            self.show_snackbar("发音请求超时，请检查网络", ERROR)
+        except httpx.ConnectError:
+            print(f"发音网络错误 [{text}]")
+            self.show_snackbar("网络连接失败，请检查网络", ERROR)
+        except Exception as e:
+            print(f"发音失败 [{text}]: {e}")
+            self.show_snackbar("发音失败，请稍后重试", ERROR)
+        finally:
+            self._audio_busy = False
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
