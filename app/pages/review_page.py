@@ -246,19 +246,8 @@ class ReviewPage:
                         color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=6),
                 # 发音按钮
-                ft.Row([
-                    ft.Container(expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP,
-                        icon_size=24,
-                        icon_color=SECONDARY,
-                        tooltip="听发音",
-                        on_click=lambda e: self._speak(wd['word']),
-                    ),
-                    ft.Container(expand=True),
-                ], alignment=ft.MainAxisAlignment.CENTER),
+                self.app.pronounce_link(wd['word'], size=28),
                 ft.Container(height=6),
-                # 固定搭配（复习时展示）
                 *([
                     ft.Container(height=4),
                     ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, SECONDARY)),
@@ -315,13 +304,7 @@ class ReviewPage:
                 ft.Row([
                     ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP,
-                        icon_size=22,
-                        icon_color=SECONDARY,
-                        tooltip="听发音",
-                        on_click=lambda e: self._speak(wd['word']),
-                    ),
+                    self.app.pronounce_link(wd['word'], size=22),
                 ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=4),
                 ft.Row([
@@ -421,11 +404,7 @@ class ReviewPage:
                 ft.Row([
                     ft.Container(width=16, content=ft.Text("•", size=14, color=TEXT_HINT)),
                     ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP, icon_size=16,
-                        icon_color=accent_color, tooltip="听发音",
-                        on_click=lambda e, t=speak_text: self._speak(t),
-                    ),
+                    self.app.pronounce_link(speak_text, size=16),
                 ], spacing=0)
             )
         if len(items) > 5:
@@ -469,11 +448,7 @@ class ReviewPage:
                         ft.Row([
                             ft.Text(f"{i+1}. ", size=FONT_BODY, color=TEXT_HINT, weight=ft.FontWeight.BOLD),
                             ft.Text(en, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
-                            ft.IconButton(
-                                icon=ft.Icons.VOLUME_UP, icon_size=16, icon_color="#CE93D8",
-                                tooltip="听发音",
-                                on_click=lambda e, t=en[:100]: self._speak(t),
-                            ),
+                            self.app.pronounce_link(en[:100], size=16),
                             ft.IconButton(icon=ft.Icons.EXPAND_MORE, icon_size=16, icon_color="#CE93D8", tooltip="显示/隐藏翻译"),
                         ], spacing=2, vertical_alignment=ft.CrossAxisAlignment.START),
                         ft.Container(height=2), zh_row,
@@ -498,11 +473,7 @@ class ReviewPage:
                 right=ft.BorderSide(0, None), top=ft.BorderSide(0, None), bottom=ft.BorderSide(0, None)),
         )
 
-    # ========== 发音 & 翻译辅助 ==========
-    def _speak(self, text):
-        """播放发音"""
-        self.app.play_audio(text)
-
+    # ========== 翻译辅助 ==========
     def _split_en_zh(self, text):
         items = [t.strip() for t in text.split('|') if t.strip()]
         result = []

@@ -201,12 +201,18 @@ class WordBreakthroughApp:
         dlg.open = False
         self.page.update()
 
-    def play_audio(self, text):
-        """播放发音 — 通过服务器发音接口，浏览器SpeechSynthesis朗读"""
+    def pronounce_link(self, text, size=24):
+        """发音链接 — 用TextSpan.url直接导航（不走WebSocket，不被弹窗拦截）"""
         if not text or not text.strip():
-            return
-        word = text.strip()
-        self.page.launch_url(f"/pronounce?text={urllib.parse.quote(word)}")
+            return ft.Container(width=0, height=0)
+        url = f"/pronounce?text={urllib.parse.quote(text.strip()[:200])}"
+        return ft.Text(
+            spans=[ft.TextSpan(
+                text="🔊",
+                url=url,
+                style=ft.TextStyle(size=size),
+            )],
+        )
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""

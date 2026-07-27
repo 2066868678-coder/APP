@@ -250,15 +250,7 @@ class StudyPage:
                         color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=8),
                 # 发音按钮
-                ft.Container(
-                    content=ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP,
-                        icon_size=28,
-                        icon_color=PRIMARY,
-                        tooltip="听发音",
-                        on_click=lambda e: self._speak(wd['word']),
-                    ),
-                ),
+                self.app.pronounce_link(wd['word'], size=28),
                 ft.Container(height=8),
                 # 音标胶囊
                 ft.Container(
@@ -352,13 +344,7 @@ class StudyPage:
                 ft.Row([
                     ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP,
-                        icon_size=22,
-                        icon_color=PRIMARY,
-                        tooltip="听发音",
-                        on_click=lambda e: self._speak(wd['word']),
-                    ),
+                    self.app.pronounce_link(wd['word'], size=22),
                 ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=4),
                 ft.Row([
@@ -405,13 +391,7 @@ class StudyPage:
                     ft.Stack([
                         ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
                     ], expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.VOLUME_UP,
-                        icon_size=16,
-                        icon_color=accent_color,
-                        tooltip="听发音",
-                        on_click=lambda e, t=speak_text: self._speak(t),
-                    ),
+                    self.app.pronounce_link(speak_text, size=16),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START)
             )
         if len(items) > 5:
@@ -468,13 +448,7 @@ class StudyPage:
                             ft.Text(f"{i+1}. ", size=FONT_BODY, color=TEXT_HINT,
                                     weight=ft.FontWeight.BOLD),
                             ft.Text(en, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
-                            ft.IconButton(
-                                icon=ft.Icons.VOLUME_UP,
-                                icon_size=16,
-                                icon_color="#CE93D8",
-                                tooltip="听发音",
-                                on_click=lambda e, t=en[:100]: self._speak(t),
-                            ),
+                            self.app.pronounce_link(en[:100], size=16),
                             ft.IconButton(
                                 icon=ft.Icons.EXPAND_MORE,
                                 icon_size=16,
@@ -539,11 +513,6 @@ class StudyPage:
                 bottom=ft.BorderSide(0, None),
             ),
         )
-
-    # ========== 发音功能 ==========
-    def _speak(self, text):
-        """播放发音"""
-        self.app.play_audio(text)
 
     # ========== 例句拆分：英文+中文 ==========
     def _split_en_zh(self, text):
