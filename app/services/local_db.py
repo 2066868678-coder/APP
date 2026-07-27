@@ -144,9 +144,10 @@ def record_study(word_id, study_type, result):
             StudyRecord.id != record.id,
         ).count() > 0
 
-        # 更新今日计划
+        # 更新今日计划（只有"记得"才算完成，"不记得"不计数）
         plan = s.query(DailyPlan).filter(DailyPlan.plan_date == today).first()
-        if not already_counted:
+        should_count = (remembered and not already_counted)
+        if should_count:
             if plan:
                 if study_type == 'new':
                     plan.new_words_done = (plan.new_words_done or 0) + 1
@@ -235,28 +236,39 @@ def get_today_words():
 
         if plan and plan.word_ids_review:
             ids = [int(x) for x in plan.word_ids_review.split(',') if x.strip()]
-            review_words = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
+            all_rw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
+            # 过滤今天已经复习过的词（点了熟悉/模糊就不再现，不记得的还要再来）
+            from datetime import datetime as dt
+            today_start = dt.combine(today, dt.min.time())
+            today_end = dt.combine(today, dt.max.time())
+            done_today = set(r[0] for r in s.query(StudyRecord.word_id).filter(
+                StudyRecord.word_id.in_(ids),
+                StudyRecord.studied_at.between(today_start, today_end),
+                StudyRecord.study_type == 'review',
+                StudyRecord.result == 'remember',
+            ).distinct().all())
+            review_words = [w for w in all_rw if w.id not in done_today]
 
-        # 今日计划已完成 → 不返回新词
-        if plan and plan.new_words_done and plan.new_words_target and plan.new_words_done >= plan.new_words_target:
-            new_words = []
-
-        # 今日新词未锁定时：从本地算出并锁定
+        # 今日新词未锁定时：从本地算出并锁定（先检查目标是否已完成）
         if not new_words:
-            studied = s.query(StudyRecord.word_id).distinct().all()
-            studied_ids = [r[0] for r in studied]
-            q = s.query(Word)
-            if studied_ids:
-                q = q.filter(~Word.id.in_(studied_ids))
+            done_ok = (plan and plan.new_words_done and plan.new_words_target
+                       and plan.new_words_done >= plan.new_words_target)
+            available = []
+            if not done_ok:
+                studied = s.query(StudyRecord.word_id).distinct().all()
+                studied_ids = [r[0] for r in studied]
+                q = s.query(Word)
+                if studied_ids:
+                    q = q.filter(~Word.id.in_(studied_ids))
 
-            saved_target = get_setting('daily_new_words_target', '20')
-            try:
-                limit_n = int(saved_target)
-            except ValueError:
-                limit_n = 10
+                saved_target = get_setting('daily_new_words_target', '20')
+                try:
+                    limit_n = int(saved_target)
+                except ValueError:
+                    limit_n = 10
 
-            available = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(limit_n).all()
-            new_words = available
+                available = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(limit_n).all()
+                new_words = available
 
             # 锁定到plan中
             if available:
@@ -289,8 +301,9 @@ def get_today_words():
                 review_words = s.query(Word).filter(Word.id.in_(due_ids)).order_by(Word.id).all()
                 if plan:
                     plan.word_ids_review = ','.join(str(w.id) for w in review_words)
+                    plan.review_target = len(review_words)
                 else:
-                    plan = DailyPlan(plan_date=today, word_ids_review=','.join(str(w.id) for w in review_words))
+                    plan = DailyPlan(plan_date=today, word_ids_review=','.join(str(w.id) for w in review_words), review_target=len(review_words))
                     s.add(plan)
                 s.commit()
 

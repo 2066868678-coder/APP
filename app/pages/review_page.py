@@ -139,6 +139,7 @@ class ReviewPage:
         else:
             self.words = words
             self.review_total = len(words)
+            self.review_done = today.get('review_done', 0) if today else 0
             self.word_index = 0
             self.remaining_queue = []
             self._show_current_word(initial=True)
@@ -152,8 +153,8 @@ class ReviewPage:
     def _build_empty(self, msg=None):
         from app.services import api_service
         try:
-            stats = api_service.get_study_stats()
-            learned = stats.get('total_studied', 0) if stats else 0
+            stats = api_service.get_stats()
+            learned = stats.get('learned_words', 0) if stats else 0
         except:
             learned = 0
         if learned > 0:
