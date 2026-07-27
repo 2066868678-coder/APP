@@ -143,18 +143,36 @@ def _run_web(port):
 
     @app.get("/pronounce", response_class=HTMLResponse)
     async def pronounce(text: str = Query(...)):
-        """返回HTML页面，用浏览器SpeechSynthesis朗读后自动关闭"""
+        """HTML页面：分离中英文分别朗读，读完自动返回App"""
         safe = text.replace('\\', '\\\\').replace("'", "\\'")
-        has_cn = bool(re.search(r'[一-鿿]', safe))
-        lang = 'zh-CN' if has_cn else 'en-US'
+
+        # 分离英文和中文
+        eng = re.sub(r'[一-鿿]+', '', safe).strip()
+        chn = ''.join(re.findall(r'[一-鿿]+', safe))
+
+        js_parts = []
+        if eng:
+            js_parts.append(f"""
+var u1=new SpeechSynthesisUtterance('{eng}');
+u1.lang='en-US';u1.rate=0.9;speechSynthesis.speak(u1);""")
+        if chn:
+            js_parts.append(f"""
+var u2=new SpeechSynthesisUtterance('{chn}');
+u2.lang='zh-CN';u2.rate=0.9;speechSynthesis.speak(u2);""")
+
+        speech_js = '\n'.join(js_parts)
+
         html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 </head><body style="margin:0">
 <script>
-var u=new SpeechSynthesisUtterance('{safe}');
-u.lang='{lang}';u.rate=0.9;
-u.onend=function(){{setTimeout(function(){{window.close()}},100)}};
-speechSynthesis.speak(u);
+{speech_js}
+setTimeout(function(){{
+  window.close();
+  setTimeout(function(){{
+    window.location.href=window.location.origin+'/';
+  }},300);
+}},8000);
 </script></body></html>"""
         return html
 

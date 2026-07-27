@@ -397,14 +397,11 @@ class ReviewPage:
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
         for item in items[:5]:
-            # 提取英文部分
-            speak_text_match = re.search(r'[a-zA-Z].*?(?=[一-鿿]|$)', item)
-            speak_text = speak_text_match.group(0).strip() if speak_text_match else item
             content_parts.append(
                 ft.Row([
                     ft.Container(width=16, content=ft.Text("•", size=14, color=TEXT_HINT)),
                     ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
-                    self.app.pronounce_link(speak_text, size=16),
+                    self.app.pronounce_link(item, size=16),
                 ], spacing=0)
             )
         if len(items) > 5:

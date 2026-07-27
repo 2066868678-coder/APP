@@ -379,9 +379,6 @@ class StudyPage:
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
         for item in items[:5]:  # 最多5条，避免太长
-            # 提取英文部分用于发音（去掉中文）
-            speak_text_match = re.search(r'[a-zA-Z].*?(?=[一-鿿]|$)', item)
-            speak_text = speak_text_match.group(0).strip() if speak_text_match else item
             content_parts.append(
                 ft.Row([
                     ft.Container(
@@ -391,7 +388,7 @@ class StudyPage:
                     ft.Stack([
                         ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
                     ], expand=True),
-                    self.app.pronounce_link(speak_text, size=16),
+                    self.app.pronounce_link(item, size=16),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START)
             )
         if len(items) > 5:
