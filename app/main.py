@@ -54,9 +54,6 @@ class WordBreakthroughApp:
         # 页面索引
         self.current_index = 0
 
-        # 音频播放器
-        self._audio_player = None
-
         # 构建UI
         self.build_ui()
 
@@ -210,7 +207,7 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 服务端抓取TTS音频 + flet-audio播放"""
+        """播放发音 — 每次新建播放器，保证autoplay每次都触发"""
         if not text or not text.strip():
             return
 
@@ -219,7 +216,7 @@ class WordBreakthroughApp:
         eng = re.sub(r'[一-鿿]+', '', word).strip()
         chn = ''.join(re.findall(r'[一-鿿]+', word))
 
-        # 抓取音频：英文→type=0，纯中文→type=2
+        # 抓取音频
         mp3 = None
         if eng:
             mp3 = self._fetch_tts(eng, 0)
@@ -228,13 +225,13 @@ class WordBreakthroughApp:
         if not mp3:
             return
 
-        # 创建音频播放器（autoplay=True确保自动播放）
-        if self._audio_player is None:
-            self._audio_player = fta.Audio(src=mp3, autoplay=True)
-            self.page.overlay.append(self._audio_player)
-        else:
-            self._audio_player.src = mp3
-        self.page.update()
+        # 每次新建播放器（autoplay只在首次创建时触发，复用则无声）
+        try:
+            player = fta.Audio(src=mp3, autoplay=True)
+            self.page.overlay.append(player)
+            self.page.update()
+        except Exception:
+            pass
 
     def _fetch_tts(self, text, type_):
         """从有道词典获取TTS音频字节"""
