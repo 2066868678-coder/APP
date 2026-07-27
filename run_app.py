@@ -122,6 +122,58 @@ def main(page: ft.Page):
     WordBreakthroughApp(page)
 
 
+def _run_web(port):
+    """Web模式：自定义FastAPI服务器 + /pronounce发音接口"""
+    from fastapi import FastAPI, Query
+    from fastapi.responses import HTMLResponse
+    import uvicorn
+    import re
+
+    # 获取Flet ASGI应用
+    flet_asgi = ft.run(
+        main=main,
+        view=ft.AppView.WEB_BROWSER,
+        host="0.0.0.0",
+        port=port,
+        export_asgi_app=True,
+    )
+
+    # 创建主应用，添加发音接口
+    app = FastAPI()
+
+    @app.get("/pronounce", response_class=HTMLResponse)
+    async def pronounce(text: str = Query(...)):
+        """返回HTML页面，用浏览器SpeechSynthesis朗读后自动关闭"""
+        safe = text.replace('\\', '\\\\').replace("'", "\\'")
+        has_cn = bool(re.search(r'[一-鿿]', safe))
+        lang = 'zh-CN' if has_cn else 'en-US'
+        html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+</head><body style="margin:0">
+<script>
+var u=new SpeechSynthesisUtterance('{safe}');
+u.lang='{lang}';u.rate=0.9;
+u.onend=function(){{setTimeout(function(){{window.close()}},100)}};
+speechSynthesis.speak(u);
+</script></body></html>"""
+        return html
+
+    # 挂载Flet应用
+    app.mount("/", flet_asgi)
+
+    print("=" * 50)
+    print("单词突围 - Web模式（含发音服务）")
+    print("=" * 50)
+    print()
+    print("电脑浏览器访问: http://localhost:8551")
+    print("手机(同WiFi): http://192.168.3.59:8551")
+    print()
+    print("按 Ctrl+C 停止")
+    print("=" * 50)
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='启动单词突围App')
     parser.add_argument('--desktop', action='store_true', help='桌面窗口模式')
@@ -130,14 +182,5 @@ if __name__ == '__main__':
     if args.desktop:
         ft.app(target=main)
     else:
-        print("=" * 50)
-        print("单词突围 - Web模式")
-        print("=" * 50)
-        print()
-        print("电脑浏览器访问: http://localhost:8551")
-        print("手机(同WiFi) : http://192.168.3.59:8551")
-        print()
-        print("按 Ctrl+C 停止")
-        print("=" * 50)
         port = int(os.getenv("PORT", 8551))
-        ft.run(main=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=port)
+        _run_web(port)

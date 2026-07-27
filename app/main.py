@@ -15,11 +15,8 @@ import os
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import re
 import urllib.parse
-import urllib.request
 import flet as ft
-import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -205,46 +202,11 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 每次新建播放器，保证autoplay每次都触发"""
+        """播放发音 — 通过服务器发音接口，浏览器SpeechSynthesis朗读"""
         if not text or not text.strip():
             return
-
-        # 分离中英文
         word = text.strip()
-        eng = re.sub(r'[一-鿿]+', '', word).strip()
-        chn = ''.join(re.findall(r'[一-鿿]+', word))
-
-        # 抓取音频
-        mp3 = None
-        if eng:
-            mp3 = self._fetch_tts(eng, 0)
-        if not mp3 and chn and not eng:
-            mp3 = self._fetch_tts(chn, 2)
-        if not mp3:
-            return
-
-        # 每次新建播放器（autoplay只在首次创建时触发，复用则无声）
-        try:
-            player = fta.Audio(src=mp3, autoplay=True)
-            self.page.overlay.append(player)
-            self.page.update()
-        except Exception:
-            pass
-
-    def _fetch_tts(self, text, type_):
-        """从有道词典获取TTS音频字节"""
-        try:
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type={type_}"
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            })
-            with urllib.request.urlopen(req, timeout=10) as r:
-                data = r.read()
-            if data and len(data) > 300:
-                return data
-        except Exception:
-            pass
-        return None
+        self.page.launch_url(f"/pronounce?text={urllib.parse.quote(word)}")
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
