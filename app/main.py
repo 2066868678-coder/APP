@@ -16,7 +16,9 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import urllib.parse
+import urllib.request
 import flet as ft
+import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -50,6 +52,9 @@ class WordBreakthroughApp:
 
         # 页面索引
         self.current_index = 0
+
+        # 音频播放器（延迟初始化）
+        self._audio_player = None
 
         # 构建UI
         self.build_ui()
@@ -202,19 +207,51 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 浏览器内置语音，零依赖零卡顿"""
+        """播放发音 — flet-audio 内联播放，不弹窗不跳转"""
         if not text or not text.strip():
             return
-        safe = text.strip().replace("'", "\\'").replace('"', '\\"')
-        # 浏览器 SpeechSynthesis API，不联网、不装包、不卡顿
-        html = (
-            "<script>"
-            f"var u=new SpeechSynthesisUtterance('{safe}');"
-            f"u.lang='en-US';u.rate=0.9;"
-            f"speechSynthesis.speak(u);"
-            "</script>"
-        )
-        self.page.launch_url("data:text/html," + urllib.parse.quote(html))
+        word = text.strip()
+
+        # 服务端抓取TTS音频（避开浏览器的CORS限制）
+        mp3_bytes = self._fetch_tts(word)
+        if not mp3_bytes:
+            return
+
+        # 创建或复用隐藏音频播放器
+        if self._audio_player is None:
+            self._audio_player = fta.Audio(
+                src=mp3_bytes,
+                autoplay=True,
+                volume=1.0,
+                release_mode=fta.ReleaseMode.RELEASE,
+            )
+            self.page.overlay.append(self._audio_player)
+        else:
+            self._audio_player.pause()
+            self._audio_player.src = mp3_bytes
+            self._audio_player.play()
+        self.page.update()
+
+    def _fetch_tts(self, word):
+        """从网络获取TTS音频字节（有道主用 + Google备用）"""
+        encoded = urllib.parse.quote(word)
+        sources = [
+            f"https://dict.youdao.com/dictvoice?audio={encoded}&type=0",
+            f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={encoded}",
+        ]
+        for url in sources:
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = resp.read()
+                if data and len(data) > 200:
+                    return data
+            except Exception:
+                continue
+        return None
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
