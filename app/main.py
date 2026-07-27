@@ -22,7 +22,6 @@ import urllib.parse
 import httpx
 import flet as ft
 import flet_audio as fta
-import pyttsx3
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -215,10 +214,11 @@ class WordBreakthroughApp:
         self.page.update()
 
     def _get_tts(self):
-        """懒初始化 TTS 引擎（线程安全）"""
+        """懒初始化 TTS 引擎（线程安全，只在用到时 import）"""
         if self._tts_engine is None:
             with self._tts_lock:
                 if self._tts_engine is None:  # double-check
+                    import pyttsx3
                     self._tts_engine = pyttsx3.init()
         return self._tts_engine
 

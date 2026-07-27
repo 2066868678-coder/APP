@@ -8,3 +8,4 @@ python-multipart>=0.0.9
 psycopg2-binary>=2.9.0
 python-docx>=1.1.0
 flet-audio>=0.85.0
+pyttsx3>=2.99
