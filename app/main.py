@@ -17,7 +17,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import re
 import urllib.parse
+import urllib.request
 import flet as ft
+import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -52,6 +54,9 @@ class WordBreakthroughApp:
         # 页面索引
         self.current_index = 0
 
+        # 音频播放器
+        self._audio_player = None
+
         # 构建UI
         self.build_ui()
 
@@ -62,6 +67,8 @@ class WordBreakthroughApp:
         self.page.padding = 0
         self.page.bgcolor = BACKGROUND
         self.page.scroll = ft.ScrollMode.AUTO
+        # 拦截错误事件，阻止红屏弹窗
+        self.page.on_error = lambda e: None
 
     def build_ui(self):
         """构建主界面"""
@@ -203,24 +210,46 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 直接打开有道TTS链接，浏览器自动播放"""
+        """播放发音 — 服务端抓取TTS音频 + flet-audio播放"""
         if not text or not text.strip():
             return
 
-        # 分离中英文，分别选用对应的语音
+        # 分离中英文
         word = text.strip()
         eng = re.sub(r'[一-鿿]+', '', word).strip()
         chn = ''.join(re.findall(r'[一-鿿]+', word))
 
-        # 有英文 → 美式英语(type=0)，纯中文 → 普通话(type=2)
+        # 抓取音频：英文→type=0，纯中文→type=2
+        mp3 = None
         if eng:
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(eng)}&type=0"
-        elif chn:
-            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(chn)}&type=2"
-        else:
+            mp3 = self._fetch_tts(eng, 0)
+        if not mp3 and chn and not eng:
+            mp3 = self._fetch_tts(chn, 2)
+        if not mp3:
             return
 
-        self.page.launch_url(url)
+        # 创建音频播放器（autoplay=True确保自动播放）
+        if self._audio_player is None:
+            self._audio_player = fta.Audio(src=mp3, autoplay=True)
+            self.page.overlay.append(self._audio_player)
+        else:
+            self._audio_player.src = mp3
+        self.page.update()
+
+    def _fetch_tts(self, text, type_):
+        """从有道词典获取TTS音频字节"""
+        try:
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type={type_}"
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            })
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = r.read()
+            if data and len(data) > 300:
+                return data
+        except Exception:
+            pass
+        return None
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
