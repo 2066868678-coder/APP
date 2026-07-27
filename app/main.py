@@ -222,31 +222,41 @@ class WordBreakthroughApp:
 
     async def _play_audio_async(self, text):
         """用 winsound（Windows 原生 API）播放，完全绕过 flet_audio"""
+        print(f"🔊 _play_audio_async: text='{text}'")
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
+            print(f"🔊  submitting to executor...")
             await loop.run_in_executor(None, self._speak_offline, text.strip())
             print(f"✅ 发音成功: {text}")
         except Exception as e:
-            print(f"❌ 离线发音失败 [{text}]: {e}")
+            print(f"❌ 离线发音失败 [{text}]: {type(e).__name__}: {e}")
             await self._play_network_fallback(text)
         finally:
             self._audio_busy = False
+            print(f"🔊 _audio_busy released")
 
     def _speak_offline(self, text):
         """【子线程】新建 TTS 引擎 → 生成 WAV → winsound 播放"""
         import pyttsx3
         import winsound
 
-        # 每次都新建引擎，避免 COM 跨线程问题
+        print(f"🔊 _speak_offline start: '{text}'")
         engine = pyttsx3.init()
+        print(f"🔊  engine initialized")
         try:
             tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
             tmp.close()
+            print(f"🔊  tmp file: {tmp.name}")
             try:
                 engine.save_to_file(text, tmp.name)
                 engine.runAndWait()
-                # Windows 原生 API 播放（绝对可靠）
-                winsound.PlaySound(tmp.name, winsound.SND_FILENAME)
+                file_size = os.path.getsize(tmp.name)
+                print(f"🔊  WAV generated: {file_size} bytes")
+                if file_size > 100:
+                    winsound.PlaySound(tmp.name, winsound.SND_FILENAME)
+                    print(f"🔊  winsound.PlaySound done")
+                else:
+                    print(f"❌  WAV file too small")
             finally:
                 self._try_cleanup(tmp.name)
         finally:
@@ -254,6 +264,7 @@ class WordBreakthroughApp:
                 engine.stop()
             except Exception:
                 pass
+        print(f"🔊 _speak_offline end")
 
     def _try_cleanup(self, path):
         """安全删除临时文件"""
