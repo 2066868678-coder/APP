@@ -13,7 +13,6 @@ import sys
 import os
 import asyncio
 import tempfile
-import threading
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,12 +52,10 @@ class WordBreakthroughApp:
         self.statistics_page = StatisticsPage(self)
         self.settings_page = SettingsPage(self)
 
-        # 全局音频播放器 + 离线 TTS 引擎
+        # 全局音频播放器（仅用于网络降级）
         self._audio_player = fta.Audio(src="", volume=1.0)
         page.services.append(self._audio_player)
         self._audio_busy = False  # 防重复发音锁
-        self._tts_engine = None
-        self._tts_lock = threading.Lock()
 
         # 当前页面索引
         self.current_index = 0
@@ -213,15 +210,6 @@ class WordBreakthroughApp:
         dlg.open = False
         self.page.update()
 
-    def _get_tts(self):
-        """懒初始化 TTS 引擎（线程安全，只在用到时 import）"""
-        if self._tts_engine is None:
-            with self._tts_lock:
-                if self._tts_engine is None:  # double-check
-                    import pyttsx3
-                    self._tts_engine = pyttsx3.init()
-        return self._tts_engine
-
     def play_audio(self, text):
         """播放单词发音（离线 TTS，无需网络）"""
         if not text or not text.strip():
@@ -233,40 +221,39 @@ class WordBreakthroughApp:
         self.page.run_task(self._play_audio_async, text.strip())
 
     async def _play_audio_async(self, text):
-        """用 pyttsx3 生成 WAV → 从文件播放（完全离线）"""
-        tmp_path = None
+        """用 winsound（Windows 原生 API）播放，完全绕过 flet_audio"""
         try:
-            # 在子线程中生成语音文件（pyttsx3 是同步的）
             loop = asyncio.get_event_loop()
-            tmp_path = await loop.run_in_executor(None, self._tts_to_file, text)
-
-            # 从文件路径播放（比 bytes / data URI 稳定得多）
-            self._audio_player.src = tmp_path
-            self._audio_player.update()
-            await asyncio.sleep(0.15)  # 给 Flutter 时间加载文件
-            await self._audio_player.play()
+            await loop.run_in_executor(None, self._speak_offline, text.strip())
             print(f"✅ 发音成功: {text}")
-
-            # 30 秒后清理临时文件
-            asyncio.get_event_loop().call_later(30,
-                lambda p=tmp_path: self._try_cleanup(p))
         except Exception as e:
             print(f"❌ 离线发音失败 [{text}]: {e}")
-            if tmp_path:
-                self._try_cleanup(tmp_path)
-            # 降级：尝试网络拉取
             await self._play_network_fallback(text)
         finally:
             self._audio_busy = False
 
-    def _tts_to_file(self, text):
-        """同步：用系统 TTS 生成临时 WAV 文件"""
-        engine = self._get_tts()
-        tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
-        tmp.close()
-        engine.save_to_file(text, tmp.name)
-        engine.runAndWait()
-        return tmp.name
+    def _speak_offline(self, text):
+        """【子线程】新建 TTS 引擎 → 生成 WAV → winsound 播放"""
+        import pyttsx3
+        import winsound
+
+        # 每次都新建引擎，避免 COM 跨线程问题
+        engine = pyttsx3.init()
+        try:
+            tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+            tmp.close()
+            try:
+                engine.save_to_file(text, tmp.name)
+                engine.runAndWait()
+                # Windows 原生 API 播放（绝对可靠）
+                winsound.PlaySound(tmp.name, winsound.SND_FILENAME)
+            finally:
+                self._try_cleanup(tmp.name)
+        finally:
+            try:
+                engine.stop()
+            except Exception:
+                pass
 
     def _try_cleanup(self, path):
         """安全删除临时文件"""
