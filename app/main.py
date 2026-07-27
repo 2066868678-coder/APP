@@ -64,8 +64,6 @@ class WordBreakthroughApp:
         self.page.padding = 0
         self.page.bgcolor = BACKGROUND
         self.page.scroll = ft.ScrollMode.AUTO
-        # 拦截错误事件，阻止红屏弹窗
-        self.page.on_error = lambda e: None
 
     def build_ui(self):
         """构建主界面"""
