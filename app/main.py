@@ -17,9 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import re
 import urllib.parse
-import urllib.request
 import flet as ft
-import flet_audio as fta
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
     TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
@@ -53,9 +51,6 @@ class WordBreakthroughApp:
 
         # 页面索引
         self.current_index = 0
-
-        # 音频播放器（延迟初始化）
-        self._audio_player = None
 
         # 构建UI
         self.build_ui()
@@ -208,49 +203,24 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 服务端抓取音频 + flet-audio内联播放"""
+        """播放发音 — 直接打开有道TTS链接，浏览器自动播放"""
         if not text or not text.strip():
             return
 
-        # 分离中英文（有道TBS不能同时处理中英混合）
+        # 分离中英文，分别选用对应的语音
         word = text.strip()
         eng = re.sub(r'[一-鿿]+', '', word).strip()
         chn = ''.join(re.findall(r'[一-鿿]+', word))
 
-        # 1) 有英文 → 有道美式英语 type=0
-        mp3 = None
+        # 有英文 → 美式英语(type=0)，纯中文 → 普通话(type=2)
         if eng:
-            mp3 = self._fetch_tts(eng, 0)
-        # 2) 纯中文 → 有道普通话 type=2
-        if not mp3 and chn and not eng:
-            mp3 = self._fetch_tts(chn, 2)
-        if not mp3:
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(eng)}&type=0"
+        elif chn:
+            url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(chn)}&type=2"
+        else:
             return
 
-        # 复用或创建播放器
-        if self._audio_player is None:
-            self._audio_player = fta.Audio(src=mp3)
-            self.page.overlay.append(self._audio_player)
-        else:
-            self._audio_player.src = mp3
-        self.page.update()
-        # 异步播放（必须用page.run_task，play()是async方法）
-        self.page.run_task(self._audio_player.play)
-
-    def _fetch_tts(self, text, type_):
-        """从有道词典获取TTS音频字节"""
-        url = f"https://dict.youdao.com/dictvoice?audio={urllib.parse.quote(text)}&type={type_}"
-        try:
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            })
-            with urllib.request.urlopen(req, timeout=10) as r:
-                data = r.read()
-            if data and len(data) > 300:
-                return data
-        except Exception:
-            pass
-        return None
+        self.page.launch_url(url)
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
