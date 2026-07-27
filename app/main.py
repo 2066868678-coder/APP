@@ -202,7 +202,7 @@ class WordBreakthroughApp:
         self.page.update()
 
     def play_audio(self, text):
-        """播放发音 — 浏览器 SpeechSynthesis，弹窗自动关闭"""
+        """播放发音 — 浏览器 SpeechSynthesis，支持中英文，播完自动关"""
         if not text or not text.strip():
             return
         word = text.strip()
@@ -211,32 +211,19 @@ class WordBreakthroughApp:
         has_cn = any('一' <= c <= '鿿' for c in word)
         lang = 'zh-CN' if has_cn else 'en-US'
 
-        # 转义 JavaScript 字符串
-        safe = word.replace('\\', '\\\\').replace("'", "\\'").replace('"', '\\"')
+        # 转义 JavaScript 字符串（不能漏掉反斜杠转义，避免引号破坏语法）
+        safe = word.replace('\\', '\\\\').replace("'", "\\'")
 
-        # 最小化 HTML：朗读后自动关闭窗口
+        # 浏览器原生 SpeechSynthesis：全文本朗读，播完自动关标签页
         html = (
             "<script>"
             f"var u=new SpeechSynthesisUtterance('{safe}');"
-            f"u.lang='{lang}';"
-            "u.rate=0.9;"
-            "u.onend=function(){window.close()};"
-            "setTimeout(function(){window.close()},8000);"  # 8秒超时保护
+            f"u.lang='{lang}';u.rate=0.9;"
+            "u.onend=function(){setTimeout(function(){window.close()},200)};"
             "speechSynthesis.speak(u);"
             "</script>"
         )
-
-        # 开小窗朗读（播完自动关），失败则直接打开
-        try:
-            self.page.launch_url(
-                "data:text/html," + urllib.parse.quote(html),
-                web_popup_window=True,
-                web_popup_window_name="_tts",
-                web_popup_window_width=100,
-                web_popup_window_height=100,
-            )
-        except Exception:
-            self.page.launch_url("data:text/html," + urllib.parse.quote(html))
+        self.page.launch_url("data:text/html," + urllib.parse.quote(html))
 
     def show_snackbar(self, message: str, color: str = None):
         """显示漂浮提示（圆角+图标）"""
