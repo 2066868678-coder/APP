@@ -214,7 +214,7 @@ class WordBreakthroughApp:
         """发音链接 — 用TextSpan.url直接导航（不走WebSocket，不被弹窗拦截）"""
         if not text or not text.strip():
             return ft.Container(width=0, height=0)
-        url = f"/pronounce?text={urllib.parse.quote(text.strip()[:200])}"
+        url = f"/pronounce?text={urllib.parse.quote(text.strip()[:600])}"
         return ft.Text(
             spans=[ft.TextSpan(
                 text="🔊",

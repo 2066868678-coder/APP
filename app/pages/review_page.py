@@ -531,7 +531,7 @@ class ReviewPage:
                 ft.Container(height=8),
                 ft.Row([
                     ft.Container(expand=True),
-                    self.app.pronounce_link(content[:200], size=18),
+                    self.app.pronounce_link(content[:500], size=18),
                 ]),
                 ft.Container(height=6),
                 ft.Text(content, size=FONT_BODY, color=TEXT_SECONDARY,

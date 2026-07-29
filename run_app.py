@@ -144,7 +144,14 @@ def _run_web(port):
     @app.get("/pronounce", response_class=HTMLResponse)
     async def pronounce(text: str = Query(...)):
         """HTML页面：按顺序朗读中英文段落，读完自动返回App"""
-        safe = text.replace('\\', '\\\\').replace("'", "\\'")
+        # 安全转义：反斜杠、单引号、换行、回车、制表符，防止JS语法中断
+        safe = (text
+                .replace('\\', '\\\\')
+                .replace("'", "\\'")
+                .replace('\n', '\\n')
+                .replace('\r', '\\r')
+                .replace('\t', '\\t')
+               )
 
         # 按顺序提取中英文段落：原文本中交替出现的中英文片段
         segments = re.findall(r'[a-zA-Z][a-zA-Z\'\s\-.,!?;:]*|[一-鿿]+', safe)
