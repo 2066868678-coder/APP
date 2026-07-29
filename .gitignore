@@ -15,9 +15,9 @@ build/
 # Database (regenerated from PDF)
 database/*.db
 
-# OCR output
+# OCR output & scripts
 ocr/output/*
-!ocr/output/.gitkeep
+ocr/text_extract.py
 
 # OS
 .DS_Store
