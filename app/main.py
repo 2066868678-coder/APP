@@ -100,9 +100,7 @@ class WordBreakthroughApp:
                     content=ft.Row([
                         ft.Column([
                             ft.Text(self.APP_NAME, size=20, weight=ft.FontWeight.BOLD,
-                                    color=TEXT_ON_PRIMARY,
-                                    shadow=ft.BoxShadow(blur_radius=4,
-                                        color=ft.Colors.BLACK26, offset=ft.Offset(0, 2))),
+                                    color=TEXT_ON_PRIMARY),
                             ft.Text(f"v{self.VERSION}", size=FONT_XS,
                                     color=ft.Colors.with_opacity(0.65, TEXT_ON_PRIMARY)),
                         ]),
