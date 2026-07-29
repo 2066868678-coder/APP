@@ -236,8 +236,8 @@ class StatisticsPage:
     def _progress_bar(self, pct):
         """Gradient progress bar"""
         pct = max(0, min(100, pct))
-        fill = max(pct, 1)
-        empty = max(100 - pct, 1) if pct < 100 else 0
+        fill = int(max(pct, 1))
+        empty = int(max(100 - pct, 1)) if pct < 100 else 0
         return ft.Container(
             content=ft.Row(spacing=0, controls=[
                 ft.Container(
@@ -308,9 +308,9 @@ class StatisticsPage:
     def _stacked_bar(self, unlearned, learning, mastered, total):
         if total <= 0:
             return ft.Container(height=12)
-        u = max(unlearned, 1)
-        l = max(learning, 1)
-        m = max(mastered, 1)
+        u = int(max(unlearned, 1))
+        l = int(max(learning, 1))
+        m = int(max(mastered, 1))
         return ft.Container(
             content=ft.Row([
                 ft.Container(expand=u, height=14, bgcolor="#94A3B8"),
