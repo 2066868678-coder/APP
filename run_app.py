@@ -214,6 +214,7 @@ var SEGMENTS = {segs_json};
 var currentRate = {speed};
 var currentIdx = 0;
 var isPlaying = false;
+var restartTimer = null;
 
 function speakSegment(idx){{
   if(idx >= SEGMENTS.length){{ checkDone(); return; }}
@@ -223,7 +224,9 @@ function speakSegment(idx){{
   u.lang = seg.lang;
   u.rate = currentRate;
   u.onend = function(){{ speakSegment(idx + 1); }};
-  u.onerror = function(){{ speakSegment(idx + 1); }};
+  u.onerror = function(){{
+    // cancel() 触发的 onerror 忽略，交给 setSpeed 的定时器处理
+  }};
   isPlaying = true;
   speechSynthesis.speak(u);
 }}
@@ -234,8 +237,13 @@ function setSpeed(rate){{
     b.classList.toggle('active', Math.abs(parseFloat(b.textContent) - rate) < 0.01);
   }});
   if(isPlaying){{
+    if(restartTimer) clearTimeout(restartTimer);
+    var restartAt = currentIdx;
     speechSynthesis.cancel();
-    speakSegment(currentIdx);
+    restartTimer = setTimeout(function(){{
+      restartTimer = null;
+      speakSegment(restartAt);
+    }}, 150);
   }}
 }}
 
