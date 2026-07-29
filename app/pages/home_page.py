@@ -266,19 +266,21 @@ class HomePage:
         )
 
         # --- Assemble page ---
-        content = ft.Column([
-            greeting_section,
-            ft.Container(height=SPACING_XXL),
-            _build_progress_bar(),
-            ft.Container(height=CARD_GAP),
-            today_task_card,
-            ft.Container(height=SPACING_XXL),
-            quick_actions,
-            ft.Container(height=SPACING_XXL),
-        ],
-            spacing=0,
+        content = ft.Container(
+            content=ft.Column([
+                greeting_section,
+                ft.Container(height=SPACING_XXL),
+                _build_progress_bar(),
+                ft.Container(height=CARD_GAP),
+                today_task_card,
+                ft.Container(height=SPACING_XXL),
+                quick_actions,
+                ft.Container(height=SPACING_XXL),
+            ],
+                spacing=0,
+                scroll=ft.ScrollMode.AUTO,
+            ),
             padding=ft.Padding(PAGE_PADDING, PAGE_PADDING, PAGE_PADDING, 0),
-            scroll=ft.ScrollMode.AUTO,
         )
         self._container.content = content
 

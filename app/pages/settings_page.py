@@ -177,15 +177,16 @@ class SettingsPage:
             if i < len(about_items) - 1:
                 about_rows.append(ft.Divider(height=1, color=BORDER))
 
-        return ft.ListView([
-            # ================================================================
-            # 每日学习目标
-            # ================================================================
-            AppCard(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.TRACK_CHANGES,
+        return ft.Container(
+            content=ft.ListView([
+                # ================================================================
+                # 每日学习目标
+                # ================================================================
+                AppCard(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Container(
+                                content=ft.Icon(ft.Icons.TRACK_CHANGES,
                                             color=COLOR_SETTINGS, size=18),
                             padding=ft.Padding(6, 6, 6, 6),
                             bgcolor=ft.Colors.with_opacity(0.10, COLOR_SETTINGS),
@@ -417,8 +418,10 @@ class SettingsPage:
             ),
 
             ft.Container(height=SPACING_LG),
-        ], padding=ft.Padding(left=PAGE_PADDING, top=PAGE_PADDING,
-                               right=PAGE_PADDING, bottom=0), spacing=0)
+            ], spacing=0),
+            padding=ft.Padding(left=PAGE_PADDING, top=PAGE_PADDING,
+                               right=PAGE_PADDING, bottom=0),
+        )
 
     def _info_row(self, label, value, index=0):
         is_alt = index % 2 == 1

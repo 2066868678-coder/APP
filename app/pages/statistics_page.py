@@ -225,11 +225,13 @@ class StatisticsPage:
 
                 ft.Container(height=SPACING_LG),
             ],
-            padding=ft.Padding(left=PAGE_PADDING, top=PAGE_PADDING,
-                               right=PAGE_PADDING, bottom=0),
             spacing=0,
         )
-        self._container.content = content
+        self._container.content = ft.Container(
+            content=content,
+            padding=ft.Padding(left=PAGE_PADDING, top=PAGE_PADDING,
+                               right=PAGE_PADDING, bottom=0),
+        )
 
     def _progress_bar(self, pct):
         """Gradient progress bar"""
