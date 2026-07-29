@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-单词突围 - 复习页面（翻卡模式 · 全新设计）
+单词突围 - 复习页面（翻卡模式 · 增强视觉设计）
 ===============================
 艾宾浩斯遗忘曲线复习
 """
@@ -11,12 +11,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 import flet as ft
 from app.theme import (
-    PRIMARY, SECONDARY, SURFACE, SUCCESS, ERROR, BACKGROUND,
+    SECONDARY, SURFACE, SUCCESS, ERROR,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT,
-    PAGE_PADDING, SPACING_SM, SPACING_MD, SPACING_LG,
-    RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_XL,
+    PAGE_PADDING, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL, SPACING_XXL,
+    RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_XL, RADIUS_FULL, RADIUS_XS,
     SHADOW_SM, SHADOW_LG,
     FONT_SM, FONT_BODY, FONT_LG, FONT_XL, FONT_XXL, FONT_XXXL, FONT_DISPLAY,
+    GRADIENT_REVIEW,
 )
 from app.services import api_service
 
@@ -35,94 +36,51 @@ class ReviewPage:
         self.flipped = False
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
+        self.badge_text = ft.Text("", size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
         self.card_container = ft.Container(expand=True)
         self.action_buttons = ft.Container(visible=False)
 
     def build(self):
+        # === Enhanced Header (Sky-themed) ===
         header = ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    content=ft.Icon(ft.Icons.AUTO_STORIES, color=SECONDARY, size=20),
-                    padding=ft.Padding(8, 8, 8, 8),
-                    bgcolor=ft.Colors.with_opacity(0.10, SECONDARY),
-                    border_radius=10,
-                ),
-                ft.Container(width=10),
-                ft.Column([
-                    ft.Text("复习单词", size=FONT_LG, weight=ft.FontWeight.BOLD,
-                            color=TEXT_PRIMARY),
-                    self.progress_text,
-                ], spacing=2, expand=True),
-                ft.Container(
-                    content=ft.Text("0/0", size=13, weight=ft.FontWeight.BOLD, color=SECONDARY),
-                    padding=ft.Padding(10, 6, 10, 6),
-                    bgcolor=ft.Colors.with_opacity(0.10, SECONDARY),
-                    border_radius=20,
-                ),
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            content=ft.Column([
+                ft.Row([
+                    # Icon with gradient background + subtle shadow
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.AUTO_STORIES, color=ft.Colors.WHITE, size=20),
+                        padding=ft.Padding(10, 10, 10, 10),
+                        gradient=GRADIENT_REVIEW,
+                        border_radius=RADIUS_MD,
+                        shadow=ft.BoxShadow(
+                            blur_radius=8, color=ft.Colors.with_opacity(0.25, SECONDARY),
+                            offset=ft.Offset(0, 2),
+                        ),
+                    ),
+                    ft.Container(width=10),
+                    ft.Column([
+                        ft.Text("复习单词", size=FONT_LG, weight=ft.FontWeight.BOLD,
+                                color=TEXT_PRIMARY),
+                        self.progress_text,
+                    ], spacing=2, expand=True),
+                    # Progress badge with gradient background
+                    ft.Container(
+                        content=self.badge_text,
+                        padding=ft.Padding(14, 6, 14, 6),
+                        gradient=GRADIENT_REVIEW,
+                        border_radius=RADIUS_FULL,
+                        shadow=ft.BoxShadow(
+                            blur_radius=6, color=ft.Colors.with_opacity(0.20, SECONDARY),
+                            offset=ft.Offset(0, 2),
+                        ),
+                    ),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ], spacing=0),
             padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
                                right=PAGE_PADDING, bottom=SPACING_SM),
         )
 
-        self.action_buttons = ft.Container(
-            content=ft.Column([
-                ft.Row([
-                    # 熟悉
-                    ft.Container(
-                        content=ft.Column([
-                            ft.Icon(ft.Icons.STAR, color=ft.Colors.WHITE, size=20),
-                            ft.Text("熟悉", color=ft.Colors.WHITE, size=12,
-                                    weight=ft.FontWeight.BOLD),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
-                        padding=ft.Padding(24, 10, 24, 10),
-                        bgcolor="#43A047",
-                        border_radius=RADIUS_LG,
-                        ink=True,
-                        shadow=SHADOW_SM,
-                        expand=True,
-                        tooltip="近期不再复习",
-                        on_click=lambda e: self._handle_result('familiar'),
-                    ),
-                    # 模糊
-                    ft.Container(
-                        content=ft.Column([
-                            ft.Icon(ft.Icons.AUTO_AWESOME, color=ft.Colors.WHITE, size=20),
-                            ft.Text("模糊", color=ft.Colors.WHITE, size=12,
-                                    weight=ft.FontWeight.BOLD),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
-                        padding=ft.Padding(24, 10, 24, 10),
-                        bgcolor=SECONDARY,
-                        border_radius=RADIUS_LG,
-                        ink=True,
-                        shadow=SHADOW_SM,
-                        expand=True,
-                        tooltip="正常艾宾浩斯复习",
-                        on_click=lambda e: self._handle_result('vague'),
-                    ),
-                    # 不记得
-                    ft.Container(
-                        content=ft.Column([
-                            ft.Icon(ft.Icons.REPLAY, color=ft.Colors.WHITE, size=20),
-                            ft.Text("不记得", color=ft.Colors.WHITE, size=12,
-                                    weight=ft.FontWeight.BOLD),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
-                        padding=ft.Padding(24, 10, 24, 10),
-                        bgcolor=ERROR,
-                        border_radius=RADIUS_LG,
-                        ink=True,
-                        shadow=SHADOW_SM,
-                        expand=True,
-                        tooltip="今天多练几次",
-                        on_click=lambda e: self._handle_result('forget'),
-                    ),
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
-                ft.Container(height=4),
-                ft.Text("回顾单词和固定搭配，点击翻转查看答案", size=11, color=TEXT_HINT,
-                        text_align=ft.TextAlign.CENTER),
-            ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.Padding(left=PAGE_PADDING, right=PAGE_PADDING, bottom=16),
-            visible=False,
-        )
+        # Action buttons with enhanced styling
+        self._build_action_buttons()
 
         # 加载数据
         try:
@@ -136,6 +94,7 @@ class ReviewPage:
         if not words:
             self.card_container.content = self._build_empty()
             self.progress_text.value = "今日复习: 0/0"
+            self.badge_text.value = "0/0"
         else:
             self.words = words
             self.review_total = len(words)
@@ -150,7 +109,55 @@ class ReviewPage:
             self.action_buttons,
         ], spacing=0, tight=True)
 
+    def _build_action_buttons(self):
+        """操作按钮区域 — 三档熟悉程度（增强视觉风格）"""
+        def _make_button(icon, text, bg_color, tooltip_text, result_level):
+            return ft.Container(
+                content=ft.Column([
+                    ft.Container(
+                        content=ft.Icon(icon, color=ft.Colors.WHITE, size=18),
+                        padding=ft.Padding(0, 2, 0, 0),
+                    ),
+                    ft.Text(text, color=ft.Colors.WHITE, size=11,
+                            weight=ft.FontWeight.W_600),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                padding=ft.Padding(20, 12, 20, 12),
+                bgcolor=bg_color,
+                border_radius=RADIUS_FULL,
+                shadow=ft.BoxShadow(
+                    blur_radius=8, color=ft.Colors.with_opacity(0.25, bg_color),
+                    offset=ft.Offset(0, 3),
+                ),
+                expand=True,
+                tooltip=tooltip_text,
+                on_click=lambda e: self._handle_result(result_level),
+                ink=True,
+            )
+
+        self.action_buttons = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    # 熟悉 — Emerald
+                    _make_button(ft.Icons.STAR, "熟悉",
+                                 SUCCESS, "近期不再复习", 'familiar'),
+                    # 模糊 — Sky
+                    _make_button(ft.Icons.AUTO_AWESOME, "模糊",
+                                 SECONDARY, "正常艾宾浩斯复习", 'vague'),
+                    # 不记得 — Red
+                    _make_button(ft.Icons.REPLAY, "不记得",
+                                 ERROR, "今天多练几次", 'forget'),
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                ft.Container(height=6),
+                ft.Text("回顾单词和固定搭配，点击翻转查看答案", size=11, color=TEXT_HINT,
+                        text_align=ft.TextAlign.CENTER),
+            ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.Padding(left=PAGE_PADDING, right=PAGE_PADDING, bottom=16),
+            visible=False,
+        )
+        return self.action_buttons
+
     def _build_empty(self, msg=None):
+        """空状态 — 增强视觉设计（Sky主题）"""
         from app.services import api_service
         try:
             stats = api_service.get_stats()
@@ -164,22 +171,32 @@ class ReviewPage:
         return ft.Container(
             content=ft.Column([
                 ft.Container(expand=True),
+                # Icon with gradient background
                 ft.Container(
-                    content=ft.Icon(ft.Icons.AUTO_STORIES_OUTLINED, size=64, color=TEXT_HINT),
+                    content=ft.Icon(ft.Icons.AUTO_STORIES_OUTLINED, size=64, color=ft.Colors.WHITE),
                     padding=ft.Padding(20, 20, 20, 20),
-                    bgcolor=ft.Colors.with_opacity(0.06, PRIMARY),
+                    gradient=GRADIENT_REVIEW,
                     border_radius=40,
+                    shadow=ft.BoxShadow(
+                        blur_radius=16, color=ft.Colors.with_opacity(0.25, SECONDARY),
+                        offset=ft.Offset(0, 6),
+                    ),
                 ),
                 ft.Container(height=16),
                 ft.Text(msg, size=FONT_LG, color=TEXT_SECONDARY,
                         text_align=ft.TextAlign.CENTER),
                 ft.Container(height=24),
+                # "去学新词" gradient button
                 ft.Container(
                     content=ft.Text("去学新词", color=ft.Colors.WHITE, size=14,
                                    weight=ft.FontWeight.BOLD),
                     padding=ft.Padding(28, 12, 28, 12),
-                    bgcolor=SECONDARY,
+                    gradient=GRADIENT_REVIEW,
                     border_radius=RADIUS_XL,
+                    shadow=ft.BoxShadow(
+                        blur_radius=10, color=ft.Colors.with_opacity(0.25, SECONDARY),
+                        offset=ft.Offset(0, 4),
+                    ),
                     ink=True,
                     on_click=lambda e: self.app.switch_to_page(1),
                 ),
@@ -202,6 +219,7 @@ class ReviewPage:
         if not words:
             self.card_container.content = self._build_empty()
             self.progress_text.value = "今日复习: 0/0"
+            self.badge_text.value = "0/0"
             self.action_buttons.visible = False
             return
         self.words = words
@@ -225,10 +243,8 @@ class ReviewPage:
         # 提取固定搭配（仅英文部分，用于反推练习）
         collocation_en = []
         if wd.get('collocations'):
-            # 先按分号或竖线分割
             raw_items = [t.strip() for t in wd['collocations'].replace('；', '|').replace(';', '|').split('|') if t.strip()]
             for item in raw_items:
-                # 拆出英文部分（中文前的内容）
                 match = re.search(r'[一-鿿]', item)
                 if match:
                     en_part = item[:match.start()].strip()
@@ -237,20 +253,47 @@ class ReviewPage:
                 else:
                     collocation_en.append(item)
 
+        # === Card Front (Enhanced) ===
         front = ft.Container(
             content=ft.Column([
-                ft.Container(height=4, bgcolor=SECONDARY,
-                             border_radius=ft.BorderRadius(top_left=20, top_right=20, bottom_left=0, bottom_right=0)),
+                # Sky gradient decoration strip at top
+                ft.Container(
+                    height=4,
+                    gradient=GRADIENT_REVIEW,
+                    border_radius=ft.BorderRadius(top_left=20, top_right=20,
+                                                   bottom_left=0, bottom_right=0),
+                ),
                 ft.Container(expand=True),
-                # 单词
-                ft.Text(wd['word'], size=32, weight=ft.FontWeight.BOLD,
-                        color=TEXT_PRIMARY, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=6),
-                # 发音按钮
-                self.app.pronounce_link(wd['word'], size=28),
-                ft.Container(height=6),
+                # Word with subtle letter spacing
+                ft.Text(
+                    wd['word'],
+                    size=FONT_DISPLAY,
+                    weight=ft.FontWeight.BOLD,
+                    color=TEXT_PRIMARY,
+                    text_align=ft.TextAlign.CENTER,
+                    letter_spacing=1.2,
+                ),
+                ft.Container(height=12),
+                # Pronunciation button + phonetic badge row
+                ft.Row([
+                    ft.Container(expand=True),
+                    # Phonetic badge with elegant pill shape
+                    ft.Container(
+                        content=ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
+                                        color=TEXT_SECONDARY, italic=True,
+                                        text_align=ft.TextAlign.CENTER),
+                        padding=ft.Padding(16, 6, 16, 6),
+                        bgcolor=ft.Colors.with_opacity(0.06, SECONDARY),
+                        border_radius=RADIUS_FULL,
+                    ),
+                    ft.Container(width=8),
+                    # Pronunciation button
+                    self.app.pronounce_link(wd['word'], size=26),
+                    ft.Container(expand=True),
+                ], alignment=ft.MainAxisAlignment.CENTER),
+                # Collocations preview (keep original feature)
                 *([
-                    ft.Container(height=4),
+                    ft.Container(height=16),
                     ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, SECONDARY)),
                     ft.Container(height=4),
                     ft.Text("固定搭配（回想含义）", size=11, color=TEXT_HINT,
@@ -267,17 +310,25 @@ class ReviewPage:
                     ) for item in collocation_en
                 ] if collocation_en else []),
                 ft.Container(height=16),
-                ft.Row([
-                    ft.Icon(ft.Icons.TOUCH_APP, size=14, color=TEXT_HINT),
-                    ft.Container(width=4),
-                    ft.Text("回想意思和搭配，点击查看", size=13, color=TEXT_HINT),
-                ], alignment=ft.MainAxisAlignment.CENTER),
+                # "tap to flip" hint — subtle and elegant
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.TOUCH_APP, size=14,
+                                color=ft.Colors.with_opacity(0.45, TEXT_HINT)),
+                        ft.Container(width=6),
+                        ft.Text("回想意思和搭配，点击查看", size=12,
+                                color=ft.Colors.with_opacity(0.45, TEXT_HINT)),
+                    ], alignment=ft.MainAxisAlignment.CENTER),
+                ),
                 ft.Container(expand=True),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
             padding=ft.Padding(left=24, top=0, right=24, bottom=24),
             bgcolor=SURFACE,
             border_radius=RADIUS_LG,
-            shadow=SHADOW_LG,
+            shadow=ft.BoxShadow(
+                blur_radius=24, color=ft.Colors.with_opacity(0.10, "#000000"),
+                offset=ft.Offset(0, 8),
+            ),
             margin=ft.Margin(left=20, right=20, top=12, bottom=12),
             ink=True,
             on_click=self._flip_card,
@@ -299,199 +350,274 @@ class ReviewPage:
             return
 
         sections = []
-        # 基本信息区（带发音）
-        sections.append(ft.Container(
-            content=ft.Column([
-                ft.Row([
-                    ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
-                            color=TEXT_PRIMARY, expand=True),
-                    self.app.pronounce_link(wd['word'], size=22),
-                ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                ft.Container(height=4),
-                ft.Row([
-                    ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
-                            color=TEXT_SECONDARY, italic=True),
-                    ft.Container(width=8),
-                    ft.Container(
-                        content=ft.Text(wd.get('pos', ''), size=FONT_SM,
-                                        color=ft.Colors.WHITE),
-                        padding=ft.Padding(8, 3, 8, 3),
-                        bgcolor=SECONDARY,
-                        border_radius=4,
-                    ) if wd.get('pos') else ft.Container(),
-                ], spacing=4),
-                ft.Container(height=8),
-                ft.Text(wd.get('meaning', ''), size=FONT_XL, weight=ft.FontWeight.W_500,
-                        color=TEXT_PRIMARY),
-            ], spacing=0),
-            padding=ft.Padding(left=12, top=12, right=12, bottom=12),
-            bgcolor=ft.Colors.with_opacity(0.06, SECONDARY),
-            border_radius=RADIUS_SM,
-            border=ft.Border(
-                left=ft.BorderSide(3, SECONDARY),
-                right=ft.BorderSide(0, None),
-                top=ft.BorderSide(0, None),
-                bottom=ft.BorderSide(0, None),
-            ),
-        ))
 
-        # 记忆方法（高亮，放前面，整个段落一次朗读）
+        # === 基本信息区（带发音按钮 - 增强设计） ===
+        sections.append(self._section_basic_with_audio(wd))
+
+        # === 记忆方法（暖琥珀色，放前面，整个段落一次朗读） ===
         if wd.get('memory_methods'):
             sections.append(self._section_memory_block(
                 "💡 记忆方法", wd['memory_methods'],
                 "#FFF8E1", "#FFB300", wd['word'],
             ))
 
-        # 例句（点击显示翻译）
+        # === 例句（点击显示翻译） ===
         if wd.get('examples'):
             sections.append(self._build_examples_section(wd['examples']))
 
-        # 固定搭配（带发音 + 显示中文释义）
+        # === 固定搭配（带发音） ===
         if wd.get('collocations'):
             sections.append(self._section_with_audio(
                 "📝 固定搭配", wd['collocations'],
                 "#E3F2FD", "#64B5F6", wd['word'],
             ))
 
-        # 派生词/扩展
+        # === 派生词/扩展 ===
         if wd.get('extensions'):
-            sections.append(self._sec_plain("🔗 派生词/扩展", wd['extensions'],
-                                            "#F1F8E9", "#81C784"))
+            sections.append(self._sec_plain(
+                "🔗 派生词/扩展", wd['extensions'],
+                "#F1F8E9", "#81C784",
+            ))
 
+        # === 卡片背面 ===
         back = ft.Container(
-            content=ft.Column(sections, spacing=8, scroll=ft.ScrollMode.AUTO),
+            content=ft.Column(sections, spacing=10, scroll=ft.ScrollMode.AUTO),
             padding=ft.Padding(left=16, top=16, right=16, bottom=16),
             bgcolor=SURFACE,
             border_radius=RADIUS_LG,
-            shadow=SHADOW_LG,
+            shadow=ft.BoxShadow(
+                blur_radius=24, color=ft.Colors.with_opacity(0.10, "#000000"),
+                offset=ft.Offset(0, 8),
+            ),
             margin=ft.Margin(left=16, right=16, top=12, bottom=12),
         )
         self.action_buttons.visible = True
         self.card_container.content = ft.Column([back], spacing=0, tight=True)
         self.page.update()
 
+    def _section_basic_with_audio(self, wd):
+        """基本信息区 — 单词/音标/词性/释义 + 发音按钮（Sky主题增强设计）"""
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY, expand=True,
+                            letter_spacing=0.5),
+                    self.app.pronounce_link(wd['word'], size=22),
+                ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=6),
+                ft.Row([
+                    ft.Text(wd.get('phonetic', ''), size=FONT_BODY,
+                            color=TEXT_SECONDARY, italic=True),
+                    ft.Container(width=10),
+                    ft.Container(
+                        content=ft.Text(wd.get('pos', ''), size=FONT_SM,
+                                        color=ft.Colors.WHITE),
+                        padding=ft.Padding(8, 3, 8, 3),
+                        bgcolor=SECONDARY,
+                        border_radius=RADIUS_XS,
+                    ) if wd.get('pos') else ft.Container(),
+                ], spacing=4),
+                ft.Container(height=10),
+                ft.Text(wd.get('meaning', ''), size=FONT_XL, weight=ft.FontWeight.W_500,
+                        color=TEXT_PRIMARY),
+            ], spacing=0),
+            padding=ft.Padding(left=16, top=14, right=16, bottom=14),
+            bgcolor=ft.Colors.with_opacity(0.05, SECONDARY),
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(4, SECONDARY),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
+        )
+
     def _sec_plain(self, title, content, bg_color, accent_color):
-        """简单信息区（不带发音）"""
+        """信息区 — 带左边缘色条（增强设计）"""
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
         for item in items:
             content_parts.append(
-                ft.Row([
-                    ft.Container(width=16, content=ft.Text("•", size=14, color=TEXT_HINT)),
-                    ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
-                ], spacing=0)
+                ft.Container(
+                    content=ft.Row([
+                        ft.Container(
+                            content=ft.Container(
+                                width=6, height=6,
+                                bgcolor=accent_color,
+                                border_radius=3,
+                            ),
+                            width=20,
+                        ),
+                        ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                    ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.START),
+                    padding=ft.Padding(left=4, top=4, right=4, bottom=4),
+                )
             )
         return ft.Container(
             content=ft.Column([
-                ft.Row([ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY)]),
-                ft.Container(height=6),
+                ft.Row([
+                    ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY),
+                ], spacing=0),
+                ft.Container(height=8),
                 *content_parts,
             ], spacing=0),
-            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
-            bgcolor=bg_color, border_radius=RADIUS_SM,
-            border=ft.Border(left=ft.BorderSide(3, accent_color),
-                right=ft.BorderSide(0, None), top=ft.BorderSide(0, None), bottom=ft.BorderSide(0, None)),
+            padding=ft.Padding(left=14, top=12, right=14, bottom=12),
+            bgcolor=bg_color,
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(4, accent_color),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
         )
 
     def _section_with_audio(self, title, content, bg_color, accent_color, word):
-        """信息区 — 每项带发音按钮"""
+        """信息区 — 每项带发音按钮（增强设计）"""
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
         for item in items[:5]:
             content_parts.append(
-                ft.Row([
-                    ft.Container(width=16, content=ft.Text("•", size=14, color=TEXT_HINT)),
-                    ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
-                    self.app.pronounce_link(item, size=16),
-                ], spacing=0)
+                ft.Container(
+                    content=ft.Row([
+                        ft.Container(
+                            content=ft.Container(
+                                width=6, height=6,
+                                bgcolor=accent_color,
+                                border_radius=3,
+                            ),
+                            width=20,
+                        ),
+                        ft.Text(item, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
+                        self.app.pronounce_link(item, size=16),
+                    ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.START),
+                    padding=ft.Padding(left=4, top=4, right=4, bottom=4),
+                )
             )
         if len(items) > 5:
             content_parts.append(
-                ft.Text(f"... 还有 {len(items)-5} 条", size=11, color=TEXT_HINT)
+                ft.Text(f"... 还有 {len(items)-5} 条", size=11, color=TEXT_HINT,
+                        text_align=ft.TextAlign.CENTER)
             )
         return ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
-                ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                ft.Container(height=6),
+                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=8),
                 *content_parts,
             ], spacing=0),
-            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
-            bgcolor=bg_color, border_radius=RADIUS_SM,
-            border=ft.Border(left=ft.BorderSide(3, accent_color),
-                right=ft.BorderSide(0, None), top=ft.BorderSide(0, None), bottom=ft.BorderSide(0, None)),
+            padding=ft.Padding(left=14, top=12, right=14, bottom=12),
+            bgcolor=bg_color,
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(4, accent_color),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
         )
 
     def _section_memory_block(self, title, content, bg_color, accent_color, word):
-        """记忆方法区 — 整个段落一次朗读，不拆成多项"""
+        """记忆方法区 — 整个段落作为一整块显示，一次朗读（增强设计）"""
         return ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
-                ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                ft.Container(height=6),
+                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=8),
                 ft.Row([
                     ft.Container(expand=True),
                     self.app.pronounce_link(content[:200], size=18),
                 ]),
-                ft.Container(height=4),
+                ft.Container(height=6),
                 ft.Text(content, size=FONT_BODY, color=TEXT_SECONDARY,
                         selectable=True),
             ], spacing=0),
-            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
-            bgcolor=bg_color, border_radius=RADIUS_SM,
-            border=ft.Border(left=ft.BorderSide(3, accent_color),
-                right=ft.BorderSide(0, None), top=ft.BorderSide(0, None), bottom=ft.BorderSide(0, None)),
+            padding=ft.Padding(left=14, top=12, right=14, bottom=12),
+            bgcolor=bg_color,
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(4, accent_color),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
         )
 
     def _build_examples_section(self, examples_text):
-        """例句区 — 默认隐藏翻译"""
+        """例句区 — 默认隐藏翻译，点击展开（增强设计）"""
         pairs = self._split_en_zh(examples_text)
+        ACCENT = "#CE93D8"
+
         example_items = []
         for i, (en, zh) in enumerate(pairs):
             zh_row = ft.Container(
                 content=ft.Column([
-                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.2, "#CE93D8")),
-                    ft.Container(height=4),
+                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.25, ACCENT)),
+                    ft.Container(height=6),
                     ft.Row([
-                        ft.Icon(ft.Icons.TRANSLATE, size=12, color="#CE93D8"),
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.TRANSLATE, size=12, color=ACCENT),
+                            padding=ft.Padding(2, 0, 2, 0),
+                        ),
                         ft.Container(width=4),
-                        ft.Text(zh or "", size=FONT_BODY, color=TEXT_HINT, italic=True, expand=True),
+                        ft.Text(zh or "", size=FONT_BODY, color=TEXT_HINT, italic=True,
+                                expand=True),
                     ]),
-                ], spacing=0), visible=False,
+                ], spacing=0),
+                visible=False,
             )
+
             example_items.append(
                 ft.Container(
                     content=ft.Column([
                         ft.Row([
-                            ft.Text(f"{i+1}. ", size=FONT_BODY, color=TEXT_HINT, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"{i+1}. ", size=FONT_BODY, color=TEXT_HINT,
+                                    weight=ft.FontWeight.BOLD),
                             ft.Text(en, size=FONT_BODY, color=TEXT_SECONDARY, expand=True),
                             self.app.pronounce_link(en[:100], size=16),
-                            ft.IconButton(icon=ft.Icons.EXPAND_MORE, icon_size=16, icon_color="#CE93D8", tooltip="显示/隐藏翻译"),
+                            ft.IconButton(
+                                icon=ft.Icons.EXPAND_MORE,
+                                icon_size=16,
+                                icon_color=ACCENT,
+                                tooltip="显示/隐藏翻译",
+                            ),
                         ], spacing=2, vertical_alignment=ft.CrossAxisAlignment.START),
-                        ft.Container(height=2), zh_row,
+                        ft.Container(height=2),
+                        zh_row,
                     ], spacing=0),
-                    padding=ft.Padding(left=4, top=6, right=4, bottom=6), ink=True,
+                    padding=ft.Padding(left=4, top=6, right=4, bottom=6),
+                    ink=True,
                     on_click=self._toggle_translation,
                 )
             )
+
         return ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Text("📖 例句", size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
                     ft.Text("点击展开翻译", size=11, color=TEXT_HINT, italic=True),
-                ]),
-                ft.Container(height=4),
+                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=6),
+                ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, ACCENT)),
+                ft.Container(height=2),
                 *example_items,
             ], spacing=0),
-            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
-            bgcolor="#F3E5F5", border_radius=RADIUS_SM,
-            border=ft.Border(left=ft.BorderSide(3, "#CE93D8"),
-                right=ft.BorderSide(0, None), top=ft.BorderSide(0, None), bottom=ft.BorderSide(0, None)),
+            padding=ft.Padding(left=14, top=12, right=14, bottom=12),
+            bgcolor="#F3E5F5",
+            border_radius=RADIUS_SM,
+            border=ft.Border(
+                left=ft.BorderSide(4, ACCENT),
+                right=ft.BorderSide(0, None),
+                top=ft.BorderSide(0, None),
+                bottom=ft.BorderSide(0, None),
+            ),
         )
 
     # ========== 翻译辅助 ==========
@@ -514,8 +640,9 @@ class ReviewPage:
                 zh_row.visible = not zh_row.visible
                 en_row = col.controls[0]
                 if len(en_row.controls) >= 3:
-                    en_row.controls[2].name = ft.Icons.EXPAND_LESS if zh_row.visible else ft.Icons.EXPAND_MORE
-                    en_row.controls[2].update()
+                    arrow = en_row.controls[2]
+                    arrow.name = ft.Icons.EXPAND_LESS if zh_row.visible else ft.Icons.EXPAND_MORE
+                    arrow.update()
                 zh_row.update()
                 if hasattr(e.control, 'page') and e.control.page:
                     e.control.page.update()
@@ -578,9 +705,12 @@ class ReviewPage:
         return self.words[self.word_index]
 
     def _update_progress(self, initial=False):
-        self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total}  |  当前 {min(self.word_index+1, self.review_total)}/{self.review_total}"
+        cur = min(self.word_index + 1, self.review_total)
+        self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total}  |  当前 {cur}/{self.review_total}"
+        self.badge_text.value = f"{self.review_done}/{self.review_total}"
         if not initial:
             self.progress_text.update()
+            self.badge_text.update()
 
     def _show_completion(self):
         self.action_buttons.visible = False
@@ -588,11 +718,16 @@ class ReviewPage:
             ft.Container(expand=True),
             ft.Container(
                 content=ft.Column([
+                    # Celebration icon with gradient background
                     ft.Container(
-                        content=ft.Icon(ft.Icons.CELEBRATION, size=72, color=SECONDARY),
+                        content=ft.Icon(ft.Icons.CELEBRATION, size=72, color=ft.Colors.WHITE),
                         padding=ft.Padding(20, 20, 20, 20),
-                        bgcolor=ft.Colors.with_opacity(0.10, SECONDARY),
+                        gradient=GRADIENT_REVIEW,
                         border_radius=40,
+                        shadow=ft.BoxShadow(
+                            blur_radius=20, color=ft.Colors.with_opacity(0.25, SECONDARY),
+                            offset=ft.Offset(0, 8),
+                        ),
                     ),
                     ft.Container(height=20),
                     ft.Text("复习完成！", size=FONT_XXL, weight=ft.FontWeight.BOLD,
@@ -601,12 +736,17 @@ class ReviewPage:
                     ft.Text(f"今日复习 {self.review_done} 个单词",
                             size=FONT_BODY, color=TEXT_SECONDARY),
                     ft.Container(height=24),
+                    # "返回首页" gradient button
                     ft.Container(
                         content=ft.Text("返回首页", color=ft.Colors.WHITE,
                                         size=14, weight=ft.FontWeight.BOLD),
-                        padding=ft.Padding(28, 12, 28, 12),
-                        bgcolor=SECONDARY,
+                        padding=ft.Padding(32, 14, 32, 14),
+                        gradient=GRADIENT_REVIEW,
                         border_radius=RADIUS_XL,
+                        shadow=ft.BoxShadow(
+                            blur_radius=12, color=ft.Colors.with_opacity(0.25, SECONDARY),
+                            offset=ft.Offset(0, 4),
+                        ),
                         ink=True,
                         on_click=lambda e: self.app.switch_to_page(0),
                     ),
@@ -615,4 +755,5 @@ class ReviewPage:
             ft.Container(expand=True),
         ])
         self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total} ✅"
+        self.badge_text.value = f"{self.review_done}/{self.review_done}"
         self.page.update()

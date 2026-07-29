@@ -19,9 +19,10 @@ import urllib.parse
 import flet as ft
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
-    TEXT_ON_PRIMARY, HEADER_PADDING_TOP,
+    TEXT_ON_PRIMARY, TEXT_SECONDARY, HEADER_PADDING_TOP,
     NAV_BAR_HEIGHT, RADIUS_MD, RADIUS_XL, SHADOW_LG,
-    FONT_BODY, ERROR,
+    FONT_BODY, FONT_XS, ERROR, BORDER,
+    GRADIENT_HEADER,
     make_theme,
 )
 from app.pages.home_page import HomePage
@@ -67,6 +68,7 @@ class WordBreakthroughApp:
         self.page_container = ft.Container(
             content=self.home_page.build(),
             expand=True,
+            animate_opacity=ft.Animation(200),
         )
 
         # 底部导航栏
@@ -88,25 +90,31 @@ class WordBreakthroughApp:
             height=NAV_BAR_HEIGHT,
             bgcolor=SURFACE,
             shadow_color=ft.Colors.BLACK12,
+            indicator_color=PRIMARY,
         )
 
         self.page.add(
             ft.Column([
-                # 顶部圆角 Header
+                # 顶部渐变 Header
                 ft.Container(
                     content=ft.Row([
                         ft.Column([
                             ft.Text(self.APP_NAME, size=20, weight=ft.FontWeight.BOLD,
-                                    color=TEXT_ON_PRIMARY),
-                            ft.Text(f"v{self.VERSION}", size=11,
-                                    color=ft.Colors.with_opacity(0.7, TEXT_ON_PRIMARY)),
+                                    color=TEXT_ON_PRIMARY,
+                                    shadow=ft.BoxShadow(blur_radius=4,
+                                        color=ft.Colors.BLACK26, offset=ft.Offset(0, 2))),
+                            ft.Text(f"v{self.VERSION}", size=FONT_XS,
+                                    color=ft.Colors.with_opacity(0.65, TEXT_ON_PRIMARY)),
                         ]),
                         ft.Container(expand=True),
-                        ft.IconButton(icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_ON_PRIMARY,
-                            tooltip="关于", on_click=self.show_about),
+                        ft.IconButton(
+                            icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_ON_PRIMARY,
+                            tooltip="关于", on_click=self.show_about,
+                            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
+                        ),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     padding=ft.Padding(left=20, right=8, top=HEADER_PADDING_TOP, bottom=16),
-                    bgcolor=PRIMARY,
+                    gradient=GRADIENT_HEADER,
                     border_radius=ft.BorderRadius(0, 0, RADIUS_XL, RADIUS_XL),
                     shadow=SHADOW_LG,
                 ),
@@ -117,7 +125,10 @@ class WordBreakthroughApp:
                     bgcolor=BACKGROUND,
                 ),
                 # 底部导航
-                self.nav_bar,
+                ft.Container(
+                    content=self.nav_bar,
+                    border=ft.border.only(top=ft.border.BorderSide(width=0.5, color=TEXT_SECONDARY)),
+                ),
             ],
                 spacing=0,
                 tight=True,
@@ -140,10 +151,8 @@ class WordBreakthroughApp:
         ]
 
         if 0 <= index < len(pages):
-            # 重建页面容器确保完全刷新
             self.page_container.content = pages[index]()
             self.nav_bar.selected_index = index
-            # 强制同步：先清空再更新
             self.page_container.update()
             self.page.update()
 
@@ -173,24 +182,26 @@ class WordBreakthroughApp:
             "  - 优化数据格式和排版"
         )
         about_dlg = ft.AlertDialog(
-            title=ft.Text("关于 单词突围"),
+            title=ft.Row([
+                ft.Icon(ft.Icons.INFO_OUTLINE, color=PRIMARY),
+                ft.Container(width=8),
+                ft.Text("关于 单词突围", weight=ft.FontWeight.BOLD),
+            ], tight=True),
             content=ft.Column(
                 controls=[
                     ft.Text(f"版本 {VERSION}（{VERSION_DATE}）", weight=ft.FontWeight.BOLD),
-                    ft.Text("基于《单词突围5200》的智能背词应用", size=12),
-                    ft.Divider(),
-                    ft.Text(f"上册收录 {2281} 个单词", size=12),
-                    ft.Text("艾宾浩斯遗忘曲线智能复习", size=12),
-                    ft.Divider(),
-                    ft.Text(CHANGES, size=11, color=ft.Colors.GREY),
+                    ft.Text("基于《单词突围5200》的智能背词应用", size=FONT_XS, color=TEXT_SECONDARY),
+                    ft.Divider(height=1, color=BORDER),
+                    ft.Text(CHANGES, size=FONT_XS, color=TEXT_SECONDARY),
                 ],
                 tight=True,
-                spacing=5,
+                spacing=8,
                 width=320,
             ),
             actions=[
                 ft.TextButton("确定", on_click=lambda e: self.close_dialog(about_dlg)),
             ],
+            shape=ft.RoundedRectangleBorder(radius=RADIUS_MD),
         )
         self.page.overlay.append(about_dlg)
         about_dlg.open = True

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-单词突围 - 首页（极简版）
-========================
-问候 + 今日进度 + 核心入口，去掉冗余信息
+单词突围 - 首页（视觉增强版）
+==============================
+问候 + 今日进度 + 核心入口，带精致微交互与视觉层次
 """
 
 import sys, os
@@ -13,10 +13,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import flet as ft
 from app.theme import (
     PRIMARY, PRIMARY_LIGHT, SECONDARY, BACKGROUND, SURFACE,
-    TEXT_PRIMARY, TEXT_SECONDARY,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, TEXT_ON_PRIMARY,
     PAGE_PADDING, CARD_GAP,
-    RADIUS_MD, RADIUS_LG,
-    FONT_XS, FONT_SM, FONT_LG, FONT_XL,
+    RADIUS_MD, RADIUS_LG, RADIUS_XL, RADIUS_SM, RADIUS_FULL,
+    FONT_XS, FONT_SM, FONT_LG, FONT_XL, FONT_XXL, FONT_XXXL, FONT_BODY,
+    GRADIENT_PRIMARY,
+    SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL, SPACING_XXL,
+    SHADOW_CARD, SHADOW_SM,
+    COLOR_LEARN, COLOR_REVIEW, COLOR_STATS, COLOR_SETTINGS,
 )
 from app.services import api_service
 
@@ -54,130 +58,223 @@ class HomePage:
         has_review = review_done < review_target
 
         h = datetime.now(timezone(timedelta(hours=8))).hour
-        if h < 5: greet = "夜深了 🌙"
-        elif h < 9: greet = "早上好 ☀️"
-        elif h < 12: greet = "上午好 🌤️"
-        elif h < 14: greet = "中午好 🌤️"
-        elif h < 18: greet = "下午好 ⛅"
-        else: greet = "晚上好 🌆"
+        if h < 5: greet = "夜深了"
+        elif h < 9: greet = "早上好"
+        elif h < 12: greet = "上午好"
+        elif h < 14: greet = "中午好"
+        elif h < 18: greet = "下午好"
+        else: greet = "晚上好"
 
-        content = ft.Column([
-            # 顶部：问候 + 连续天数
-            ft.Row([
-                ft.Column([
-                    ft.Text(greet, size=FONT_XL, weight=ft.FontWeight.W_600,
-                            color=TEXT_PRIMARY),
-                    ft.Text(f"连续 {streak} 天", size=FONT_SM,
-                            color=TEXT_SECONDARY),
-                ], spacing=2),
-                ft.Container(expand=True),
+        # --- emoji map ---
+        greet_emoji = {"夜深了": "🌙", "早上好": "☀️", "上午好": "🌤️",
+                       "中午好": "🌤️", "下午好": "⛅", "晚上好": "🌆"}
+
+        progress_pct = round(learned / total * 100, 1) if total > 0 else 0
+
+        # --- Greeting section with decoration ---
+        greeting_section = ft.Container(
+            content=ft.Stack([
+                # subtle background decoration — soft gradient circle
                 ft.Container(
-                    content=ft.Text(f"{learned}/{total}", size=FONT_XL,
-                                    weight=ft.FontWeight.BOLD, color=PRIMARY),
-                    padding=ft.Padding(16, 8, 16, 8),
-                    bgcolor=ft.Colors.with_opacity(0.1, PRIMARY),
-                    border_radius=RADIUS_LG,
+                    width=180, height=180,
+                    gradient=ft.RadialGradient(
+                        colors=[
+                            ft.Colors.with_opacity(0.08, PRIMARY),
+                            ft.Colors.with_opacity(0.0, PRIMARY),
+                        ],
+                    ),
+                    border_radius=90,
+                    right=-30, top=-60,
                 ),
+                ft.Row([
+                    ft.Column([
+                        ft.Row([
+                            ft.Text(greet, size=FONT_XXL,
+                                    weight=ft.FontWeight.W_700, color=TEXT_PRIMARY),
+                            ft.Text(greet_emoji.get(greet, ""), size=FONT_XXL),
+                        ], spacing=6),
+                        ft.Container(height=4),
+                        # streak badge
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Text("🔥", size=FONT_BODY),
+                                ft.Container(width=4),
+                                ft.Text(f"连续 {streak} 天",
+                                        size=FONT_SM, weight=ft.FontWeight.W_600,
+                                        color="#92400E"),
+                            ], spacing=0),
+                            padding=ft.Padding(10, 4, 12, 4),
+                            bgcolor=ft.Colors.with_opacity(0.15, "#F59E0B"),
+                            border_radius=RADIUS_FULL,
+                        ),
+                    ], spacing=0),
+                    ft.Container(expand=True),
+                    # learned / total pill
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text(f"{learned}", size=FONT_XXL,
+                                    weight=ft.FontWeight.BOLD, color=TEXT_ON_PRIMARY),
+                            ft.Text(f"/ {total}", size=FONT_SM,
+                                    color=ft.Colors.with_opacity(0.7, TEXT_ON_PRIMARY)),
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                        padding=ft.Padding(18, 10, 18, 10),
+                        gradient=GRADIENT_PRIMARY,
+                        border_radius=RADIUS_XL,
+                        shadow=SHADOW_CARD,
+                    ),
+                ], alignment=ft.MainAxisAlignment.START),
             ]),
-            ft.Container(height=32),
+            height=130,
+        )
 
-            # 总进度条
-            ft.Container(
+        # --- Total progress bar ---
+        def _build_progress_bar():
+            fill_color = GRADIENT_PRIMARY if progress_pct < 100 else ft.Colors.GREEN_400
+            return ft.Container(
                 content=ft.Column([
                     ft.Row([
-                        ft.Text("总进度", size=FONT_SM, color=TEXT_SECONDARY),
+                        ft.Text("总进度", size=FONT_SM, color=TEXT_SECONDARY,
+                                weight=ft.FontWeight.W_500),
                         ft.Container(expand=True),
-                        ft.Text(f"{round(learned/total*100,1)}%" if total > 0 else "0%",
-                                size=FONT_SM, weight=ft.FontWeight.W_600, color=PRIMARY),
-                    ]),
-                    ft.Container(height=6),
-                    ft.Container(
-                        height=6, border_radius=3,
-                        bgcolor=ft.Colors.with_opacity(0.1, PRIMARY),
-                        content=ft.Container(
-                            height=6, border_radius=3,
-                            bgcolor=PRIMARY,
+                        ft.Text(
+                            f"{progress_pct}%",
+                            size=FONT_SM, weight=ft.FontWeight.W_700, color=PRIMARY,
                         ),
+                    ]),
+                    ft.Container(height=8),
+                    # track
+                    ft.Container(
+                        height=8, border_radius=4,
+                        bgcolor=ft.Colors.with_opacity(0.08, PRIMARY),
                         clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                        content=ft.Container(
+                            height=8, border_radius=4,
+                            gradient=fill_color if progress_pct < 100 else None,
+                            bgcolor=fill_color if progress_pct == 100 else None,
+                        ),
                     ),
                 ]),
-            ),
-            ft.Container(height=CARD_GAP),
+                padding=ft.Padding(SPACING_LG, SPACING_MD, SPACING_LG, SPACING_MD),
+                bgcolor=SURFACE,
+                border_radius=RADIUS_LG,
+            )
 
-            # 今日任务卡片
-            ft.Container(
+        # --- Today task card ---
+        def _task_card(icon, label, done, target, color, has_active, page_idx):
+            pct = min(done / target, 1.0) if target > 0 else 0
+            completed = done >= target
+            fill = ft.Colors.GREEN_400 if completed else color
+            return ft.Container(
                 content=ft.Column([
                     ft.Row([
-                        ft.Icon(ft.Icons.TODAY, size=18, color=TEXT_PRIMARY),
-                        ft.Container(width=8),
-                        ft.Text("今日任务", size=FONT_LG, weight=ft.FontWeight.W_600,
-                                color=TEXT_PRIMARY),
-                    ]),
-                    ft.Container(height=16),
-                    ft.Row([
-                        # 新学
                         ft.Container(
-                            content=ft.Column([
-                                ft.Icon(ft.Icons.MENU_BOOK_OUTLINED, size=24, color=PRIMARY),
-                                ft.Container(height=6),
-                                ft.Text("新学", size=FONT_XS, color=TEXT_SECONDARY),
-                                ft.Text(f"{new_done}/{new_target}", size=FONT_XL,
-                                        weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                                ft.Container(
-                                    height=4, border_radius=2, expand=True,
-                                    bgcolor=ft.Colors.with_opacity(0.1, PRIMARY),
-                                    content=ft.Container(height=4, border_radius=2,
-                                        bgcolor=PRIMARY if has_study else ft.Colors.GREEN_400),
-                                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
-                                ),
-                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                            padding=16, bgcolor=SURFACE, border_radius=RADIUS_LG,
-                            shadow=ft.BoxShadow(1, 2, ft.Colors.BLACK12),
-                            expand=True, ink=True,
-                            on_click=lambda e: self.app.switch_to_page(1),
+                            content=ft.Icon(icon, size=20, color=TEXT_ON_PRIMARY),
+                            width=36, height=36,
+                            bgcolor=ft.Colors.with_opacity(0.15, color),
+                            border_radius=10,
+                            alignment=ft.alignment.center,
                         ),
-                        ft.Container(width=CARD_GAP),
-                        # 复习
+                        ft.Container(expand=True),
                         ft.Container(
-                            content=ft.Column([
-                                ft.Icon(ft.Icons.AUTO_STORIES_OUTLINED, size=24, color=SECONDARY),
-                                ft.Container(height=6),
-                                ft.Text("复习", size=FONT_XS, color=TEXT_SECONDARY),
-                                ft.Text(f"{review_done}/{review_target}", size=FONT_XL,
-                                        weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                                ft.Container(
-                                    height=4, border_radius=2, expand=True,
-                                    bgcolor=ft.Colors.with_opacity(0.1, SECONDARY),
-                                    content=ft.Container(height=4, border_radius=2,
-                                        bgcolor=SECONDARY if has_review else ft.Colors.GREEN_400),
-                                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
-                                ),
-                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                            padding=16, bgcolor=SURFACE, border_radius=RADIUS_LG,
-                            shadow=ft.BoxShadow(1, 2, ft.Colors.BLACK12),
-                            expand=True, ink=True,
-                            on_click=lambda e: self.app.switch_to_page(2),
+                            content=ft.Text(
+                                "已完成" if completed else f"{done}/{target}",
+                                size=FONT_XS,
+                                color=ft.Colors.GREEN_600 if completed else TEXT_SECONDARY,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                            padding=ft.Padding(8, 3, 8, 3),
+                            bgcolor=ft.Colors.GREEN_50 if completed
+                                    else ft.Colors.with_opacity(0.06, TEXT_SECONDARY),
+                            border_radius=RADIUS_SM,
                         ),
                     ]),
+                    ft.Container(height=10),
+                    ft.Text(label, size=FONT_LG, weight=ft.FontWeight.W_700,
+                            color=TEXT_PRIMARY),
+                    ft.Container(height=4),
+                    # thin progress bar
+                    ft.Container(
+                        height=5, border_radius=3, expand=True,
+                        bgcolor=ft.Colors.with_opacity(0.08, color),
+                        clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                        content=ft.Container(
+                            height=5, border_radius=3,
+                            bgcolor=fill,
+                        ),
+                    ),
+                    ft.Container(height=4),
+                    ft.Text(
+                        f"{round(pct * 100)}%",
+                        size=FONT_XS, color=TEXT_HINT,
+                    ),
+                ], spacing=0),
+                padding=ft.Padding(SPACING_LG, SPACING_MD, SPACING_LG, SPACING_MD),
+                bgcolor=SURFACE,
+                border_radius=RADIUS_XL,
+                expand=True, ink=True,
+                shadow=SHADOW_CARD,
+                # left accent border
+                border=ft.Border(
+                    left=ft.BorderSide(width=3, color=color),
+                ),
+                on_click=lambda e, idx=page_idx: self.app.switch_to_page(idx),
+            )
+
+        today_task_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.TODAY, size=16, color=PRIMARY),
+                        width=28, height=28,
+                        bgcolor=ft.Colors.with_opacity(0.1, PRIMARY),
+                        border_radius=8,
+                        alignment=ft.alignment.center,
+                    ),
+                    ft.Container(width=10),
+                    ft.Text("今日任务", size=FONT_LG, weight=ft.FontWeight.W_700,
+                            color=TEXT_PRIMARY),
                 ]),
-                padding=20, bgcolor=SURFACE, border_radius=RADIUS_LG,
-                shadow=ft.BoxShadow(2, 4, ft.Colors.BLACK12),
-            ),
-
-            ft.Container(height=CARD_GAP),
-
-            # 底部导航快捷按钮
-            ft.Row([
-                self._big_btn("学习", ft.Icons.MENU_BOOK, PRIMARY, 1),
-                ft.Container(width=8),
-                self._big_btn("复习", ft.Icons.AUTO_STORIES, SECONDARY, 2),
-                ft.Container(width=8),
-                self._big_btn("统计", ft.Icons.BAR_CHART, "#7E57C2", 3),
-                ft.Container(width=8),
-                self._big_btn("设置", ft.Icons.SETTINGS, "#78909C", 4),
+                ft.Container(height=SPACING_LG),
+                ft.Row([
+                    _task_card(ft.Icons.MENU_BOOK_OUTLINED, "新学",
+                               new_done, new_target, PRIMARY, has_study, 1),
+                    ft.Container(width=CARD_GAP),
+                    _task_card(ft.Icons.AUTO_STORIES_OUTLINED, "复习",
+                               review_done, review_target, SECONDARY, has_review, 2),
+                ]),
             ]),
+            padding=ft.Padding(SPACING_XL, SPACING_LG, SPACING_XL, SPACING_LG),
+            bgcolor=SURFACE,
+            border_radius=RADIUS_XL,
+            shadow=ft.BoxShadow(
+                blur_radius=16,
+                color=ft.Colors.with_opacity(0.06, "#000000"),
+                offset=ft.Offset(0, 4),
+            ),
+        )
 
-            ft.Container(height=24),
+        # --- Quick action buttons ---
+        btn_configs = [
+            ("学习", ft.Icons.MENU_BOOK, COLOR_LEARN, 1),
+            ("复习", ft.Icons.AUTO_STORIES, COLOR_REVIEW, 2),
+            ("统计", ft.Icons.BAR_CHART, COLOR_STATS, 3),
+            ("设置", ft.Icons.SETTINGS, COLOR_SETTINGS, 4),
+        ]
+
+        quick_actions = ft.Row(
+            [self._big_btn(lb, ic, cl, idx) for lb, ic, cl, idx in btn_configs],
+        )
+
+        # --- Assemble page ---
+        content = ft.Column([
+            greeting_section,
+            ft.Container(height=SPACING_XXL),
+            _build_progress_bar(),
+            ft.Container(height=CARD_GAP),
+            today_task_card,
+            ft.Container(height=SPACING_XXL),
+            quick_actions,
+            ft.Container(height=SPACING_XXL),
         ],
             spacing=0,
             padding=ft.Padding(PAGE_PADDING, PAGE_PADDING, PAGE_PADDING, 0),
@@ -188,14 +285,20 @@ class HomePage:
     def _big_btn(self, label, icon, color, page_idx):
         return ft.Container(
             content=ft.Column([
-                ft.Icon(icon, size=24, color=color),
-                ft.Container(height=4),
-                ft.Text(label, size=FONT_XS, color=TEXT_SECONDARY,
-                        weight=ft.FontWeight.W_500),
+                ft.Container(
+                    content=ft.Icon(icon, size=22, color=TEXT_ON_PRIMARY),
+                    width=44, height=44,
+                    bgcolor=ft.Colors.with_opacity(0.15, color),
+                    border_radius=12,
+                    alignment=ft.alignment.center,
+                ),
+                ft.Container(height=6),
+                ft.Text(label, size=FONT_SM, color=TEXT_PRIMARY,
+                        weight=ft.FontWeight.W_600),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, tight=True),
             bgcolor=SURFACE, border_radius=RADIUS_LG,
-            padding=ft.Padding(8, 14, 8, 10),
-            shadow=ft.BoxShadow(1, 2, ft.Colors.BLACK12),
+            padding=ft.Padding(6, 14, 6, 12),
+            shadow=SHADOW_SM,
             expand=True, ink=True,
-            on_click=lambda e: self.app.switch_to_page(page_idx),
+            on_click=lambda e, idx=page_idx: self.app.switch_to_page(idx),
         )
