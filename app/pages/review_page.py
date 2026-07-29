@@ -335,9 +335,9 @@ class ReviewPage:
             ),
         ))
 
-        # 记忆方法（高亮，放前面）
+        # 记忆方法（高亮，放前面，整个段落一次朗读）
         if wd.get('memory_methods'):
-            sections.append(self._section_with_audio(
+            sections.append(self._section_memory_block(
                 "💡 记忆方法", wd['memory_methods'],
                 "#FFF8E1", "#FFB300", wd['word'],
             ))
@@ -417,6 +417,29 @@ class ReviewPage:
                 ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=6),
                 *content_parts,
+            ], spacing=0),
+            padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+            bgcolor=bg_color, border_radius=RADIUS_SM,
+            border=ft.Border(left=ft.BorderSide(3, accent_color),
+                right=ft.BorderSide(0, None), top=ft.BorderSide(0, None), bottom=ft.BorderSide(0, None)),
+        )
+
+    def _section_memory_block(self, title, content, bg_color, accent_color, word):
+        """记忆方法区 — 整个段落一次朗读，不拆成多项"""
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
+                            color=TEXT_PRIMARY, expand=True),
+                ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=6),
+                ft.Row([
+                    ft.Container(expand=True),
+                    self.app.pronounce_link(content[:200], size=18),
+                ]),
+                ft.Container(height=4),
+                ft.Text(content, size=FONT_BODY, color=TEXT_SECONDARY,
+                        selectable=True),
             ], spacing=0),
             padding=ft.Padding(left=12, top=10, right=12, bottom=10),
             bgcolor=bg_color, border_radius=RADIUS_SM,
