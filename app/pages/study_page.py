@@ -272,7 +272,6 @@ class StudyPage:
                     weight=ft.FontWeight.BOLD,
                     color=TEXT_PRIMARY,
                     text_align=ft.TextAlign.CENTER,
-                    letter_spacing=1.2,
                 ),
                 ft.Container(height=12),
                 # Pronunciation button + phonetic badge row
@@ -388,7 +387,7 @@ class StudyPage:
                 ft.Row([
                     ft.Text(wd['word'], size=FONT_XXXL, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True,
-                            letter_spacing=0.5),
+                        ),
                     self.app.pronounce_link(wd['word'], size=22),
                 ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=6),

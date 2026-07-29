@@ -125,7 +125,7 @@ class WordBreakthroughApp:
                 # 底部导航
                 ft.Container(
                     content=self.nav_bar,
-                    border=ft.border.only(top=ft.border.BorderSide(width=0.5, color=TEXT_SECONDARY)),
+                    border=ft.Border(top=ft.BorderSide(width=0.5, color=TEXT_SECONDARY)),
                 ),
             ],
                 spacing=0,
