@@ -142,7 +142,7 @@ def _run_web(port):
     app = FastAPI()
 
     @app.get("/pronounce", response_class=HTMLResponse)
-    async def pronounce(text: str = Query(...)):
+    async def pronounce(text: str = Query(...), speed: float = Query(0.9)):
         """HTML页面：按顺序朗读中英文段落，读完自动返回App"""
         # 安全转义：反斜杠、单引号、换行、回车、制表符，防止JS语法中断
         safe = (text
@@ -166,47 +166,94 @@ def _run_web(port):
         else:
             lang_override = None
 
-        # 构建链式朗读JS（函数名用 s0 s1 s2... 避免数字做函数名）
-        chain_js = []
-        for i, seg in enumerate(segments):
-            has_cn = bool(re.findall(r'[一-鿿]', seg))
-            lang = lang_override if lang_override else ('zh-CN' if has_cn else 'en-US')
-            is_last = (i == len(segments) - 1)
-            onend = 'checkDone()' if is_last else f's{i+1}()'
-            seg_escaped = seg.replace("'", "\\'")
-            chain_js.append(f"""function s{i}(){{
-var u=new SpeechSynthesisUtterance('{seg_escaped}');
-u.lang='{lang}';u.rate=0.9;
-u.onend=function(){{{onend}}};
-speechSynthesis.speak(u);
-}}""")
-        chain_js.append("s0()")
-
-        speech_js = '\n'.join(chain_js)
+        # 把段落编码为 JSON 供 JS 使用（避免手动拼接字符串的转义问题）
+        import json as _json
+        segs_json = _json.dumps([
+            {"text": seg,
+             "lang": lang_override or ('zh-CN' if re.findall(r'[一-鿿]', seg) else 'en-US')}
+            for seg in segments
+        ])
 
         display_text = safe[:300]
-        html = f"""<!DOCTYPE html>
+        html = f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;
-  background:#f5f5f5;font-family:sans-serif;padding:20px;box-sizing:border-box;}}
-.box{{background:white;border-radius:20px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.1);
-  max-width:90%;word-break:break-word;}}
-.word{{font-size:28px;line-height:1.6;color:#333;text-align:center;}}
-.hint{{margin-top:20px;font-size:14px;color:#999;text-align:center;}}
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:#f0f4ff;font-family:-apple-system,sans-serif;padding:20px;}}
+.box{{background:white;border-radius:24px;padding:32px;box-shadow:0 8px 32px rgba(0,0,0,.08);
+  max-width:92%;width:460px;word-break:break-word;text-align:center;}}
+.word{{font-size:24px;line-height:1.7;color:#1e293b;margin-bottom:16px;}}
+.hint{{font-size:14px;color:#94a3b8;margin-bottom:24px;}}
+.speed-bar{{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;}}
+.speed-btn{{padding:8px 16px;border:2px solid #e2e8f0;border-radius:20px;
+  background:white;color:#64748b;font-size:14px;cursor:pointer;transition:all .15s;touch-action:manipulation;}}
+.speed-btn.active{{border-color:#4f46e5;background:#eef2ff;color:#4f46e5;font-weight:600;}}
+.speed-btn:hover{{border-color:#4f46e5;}}
+.back-btn{{display:inline-block;padding:10px 28px;background:#e2e8f0;
+  border:none;border-radius:20px;color:#64748b;font-size:14px;cursor:pointer;
+  transition:all .15s;touch-action:manipulation;text-decoration:none;}}
+.back-btn:hover{{background:#cbd5e1;}}
 </style>
 </head><body>
 <div class="box">
-<div class="word">{display_text}</div>
-<div class="hint">🔊 播放中，读完后自动返回...</div>
+<div class="word" id="displayText">{display_text}</div>
+<div class="speed-bar" id="speedBar">
+  <button class="speed-btn" onclick="setSpeed(0.5)">0.5x</button>
+  <button class="speed-btn" onclick="setSpeed(0.75)">0.75x</button>
+  <button class="speed-btn active" onclick="setSpeed(1.0)">1.0x</button>
+  <button class="speed-btn" onclick="setSpeed(1.25)">1.25x</button>
+  <button class="speed-btn" onclick="setSpeed(1.5)">1.5x</button>
+  <button class="speed-btn" onclick="setSpeed(2.0)">2.0x</button>
+</div>
+<div class="hint" id="statusHint">🔊 播放中，点击倍速可调整...</div>
+<button class="back-btn" onclick="goBack()">← 返回</button>
 </div>
 <script>
-function checkDone(){{
-  window.close();
-  setTimeout(function(){{window.location.href=window.location.origin+'/';}},200);
+var SEGMENTS = {segs_json};
+var currentRate = {speed};
+var currentIdx = 0;
+var isPlaying = false;
+
+function speakSegment(idx){{
+  if(idx >= SEGMENTS.length){{ checkDone(); return; }}
+  currentIdx = idx;
+  var seg = SEGMENTS[idx];
+  var u = new SpeechSynthesisUtterance(seg.text);
+  u.lang = seg.lang;
+  u.rate = currentRate;
+  u.onend = function(){{ speakSegment(idx + 1); }};
+  u.onerror = function(){{ speakSegment(idx + 1); }};
+  isPlaying = true;
+  speechSynthesis.speak(u);
 }}
-{speech_js}
-</script></body></html>"""
+
+function setSpeed(rate){{
+  currentRate = rate;
+  document.querySelectorAll('.speed-btn').forEach(function(b){{
+    b.classList.toggle('active', Math.abs(parseFloat(b.textContent) - rate) < 0.01);
+  }});
+  if(isPlaying){{
+    speechSynthesis.cancel();
+    speakSegment(currentIdx);
+  }}
+}}
+
+function checkDone(){{
+  isPlaying = false;
+  document.getElementById('statusHint').textContent = '✅ 播放完成';
+  setTimeout(function(){{ goBack(); }}, 800);
+}}
+
+function goBack(){{
+  speechSynthesis.cancel();
+  window.close();
+  setTimeout(function(){{ window.location.href = window.location.origin + '/'; }}, 200);
+}}
+
+// 开始播放
+speakSegment(0);
+</script></body></html>'''
         return html
 
     # 挂载Flet应用
