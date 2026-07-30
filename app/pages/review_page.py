@@ -662,18 +662,20 @@ class ReviewPage:
                 last = s.query(StudyRecord).filter(StudyRecord.word_id == word_id
                     ).order_by(StudyRecord.id.desc()).first()
                 if last:
-                    last.review_interval = 60
+                    last.review_interval = 4  # 3-4天后复习（不是60天）
                     s.commit()
             except: s.rollback()
             finally: s.close()
             self.review_done += 1
             self._next_word()
-            self.app.show_snackbar("⭐ 已标记为熟悉", SUCCESS)
+            self.app.show_snackbar("⭐ 已标记为熟悉，3-4天后复习", SUCCESS)
         elif level == 'vague':
             api_service.record_study(word_id, 'review', 'remember')
             self.review_done += 1
+            if word_id not in self.remaining_queue:
+                self.remaining_queue.append(word_id)  # 稍后再现
             self._next_word()
-            self.app.show_snackbar("✅ 记得！下次复习间隔增加", SUCCESS)
+            self.app.show_snackbar("✅ 模糊记得，稍后再次出现", SUCCESS)
         else:
             api_service.record_study(word_id, 'review', 'forget')
             if word_id not in self.remaining_queue:
@@ -704,8 +706,8 @@ class ReviewPage:
         return self.words[self.word_index]
 
     def _update_progress(self, initial=False):
-        cur = min(self.word_index + 1, self.review_total)
-        self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total}  |  当前 {cur}/{self.review_total}"
+        remaining = max(0, self.review_total - self.review_done)
+        self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total}  |  剩余 {remaining} 个"
         self.badge_text.value = f"{self.review_done}/{self.review_total}"
         if not initial:
             self.progress_text.update()

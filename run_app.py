@@ -215,15 +215,20 @@ var currentRate = {speed};
 var currentIdx = 0;
 var isPlaying = false;
 var restartTimer = null;
+var wasCancelled = false;
 
 function speakSegment(idx){{
   if(idx >= SEGMENTS.length){{ checkDone(); return; }}
+  if(wasCancelled) return;
   currentIdx = idx;
   var seg = SEGMENTS[idx];
   var u = new SpeechSynthesisUtterance(seg.text);
   u.lang = seg.lang;
   u.rate = currentRate;
-  u.onend = function(){{ speakSegment(idx + 1); }};
+  u.onend = function(){{
+    if(wasCancelled) return;
+    speakSegment(idx + 1);
+  }};
   u.onerror = function(){{
     // cancel() 触发的 onerror 忽略，交给 setSpeed 的定时器处理
   }};
@@ -238,10 +243,12 @@ function setSpeed(rate){{
   }});
   if(isPlaying){{
     if(restartTimer) clearTimeout(restartTimer);
+    wasCancelled = true;
     var restartAt = currentIdx;
     speechSynthesis.cancel();
     restartTimer = setTimeout(function(){{
       restartTimer = null;
+      wasCancelled = false;
       speakSegment(restartAt);
     }}, 150);
   }}

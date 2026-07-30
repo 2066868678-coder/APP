@@ -47,11 +47,9 @@ def _clear_study_records():
 
 
 def _generate_docx(words_by_date):
-    """生成Word文档（内存中）"""
+    """生成Word文档 — 含单词/音标/词性/释义/固定搭配/派生词，不含记忆法和例句"""
     doc = Document()
-
-    # 标题
-    title = doc.add_heading('学习记录', level=0)
+    doc.add_heading('学习记录（导出不含记忆法和例句）', level=0)
     doc.add_paragraph(f'生成时间：{datetime.now().strftime("%Y-%m-%d %H:%M")}')
     doc.add_paragraph('')
 
@@ -59,7 +57,6 @@ def _generate_docx(words_by_date):
     for date, words in words_by_date.items():
         doc.add_heading(f'{date}（{len(words)}词）', level=1)
         for w in words:
-            result_icon = '\u2713' if w.get('result') == 'remember' else '\u2717'
             p = doc.add_paragraph()
             run = p.add_run(f"{w['word']}")
             run.bold = True
@@ -70,12 +67,44 @@ def _generate_docx(words_by_date):
             if w.get('pos'):
                 run3 = p.add_run(f"  [{w['pos']}]")
                 run3.font.size = Pt(10)
-            doc.add_paragraph(f"\u91ca\u4e49\uff1a{w.get('meaning', '')}", style='List Bullet')
-            doc.add_paragraph(f"\u7ed3\u679c\uff1a{result_icon}", style='List Bullet')
+            doc.add_paragraph(f"释义：{w.get('meaning', '')}", style='List Bullet')
+            if w.get('collocations'):
+                colls = w['collocations'].replace('|', '；')
+                doc.add_paragraph(f"固定搭配：{colls}", style='List Bullet')
+            if w.get('derivatives'):
+                doc.add_paragraph(f"派生词：{w['derivatives']}", style='List Bullet')
+            if w.get('extensions'):
+                doc.add_paragraph(f"扩展：{w['extensions']}", style='List Bullet')
 
     buf = io.BytesIO()
     doc.save(buf)
     return buf.getvalue(), total
+
+def _generate_txt(words_by_date):
+    """生成纯文本 — 不含记忆法和例句"""
+    lines = []
+    lines.append("学习记录（导出不含记忆法和例句）")
+    lines.append(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    lines.append("")
+
+    total = sum(len(words) for words in words_by_date.values())
+    for date, words in words_by_date.items():
+        lines.append(f"【{date}】（{len(words)}词）")
+        lines.append("")
+        for w in words:
+            lines.append(f"  {w['word']}  {w.get('phonetic', '')}  [{w.get('pos', '')}]")
+            lines.append(f"    释义：{w.get('meaning', '')}")
+            if w.get('collocations'):
+                colls = w['collocations'].replace('|', '；')
+                lines.append(f"    固定搭配：{colls}")
+            if w.get('derivatives'):
+                lines.append(f"    派生词：{w['derivatives']}")
+            if w.get('extensions'):
+                lines.append(f"    扩展：{w['extensions']}")
+            lines.append("")
+        lines.append("")
+    lines.append(f"总计：{total}词")
+    return '\n'.join(lines), total
 
 
 def _format_date(d_str):
@@ -109,8 +138,18 @@ class SettingsPage:
                            size=FONT_SM, color=TEXT_HINT),
             padding=SPACING_MD,
         )
+        self._quick_days = ft.TextField(
+            value="7", width=60, height=38,
+            text_size=14, text_align=ft.TextAlign.CENTER,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            border=ft.InputBorder.OUTLINE,
+            border_color=COLOR_SETTINGS,
+            focused_border_color=COLOR_SETTINGS,
+            content_padding=ft.Padding(left=8, right=8, top=4, bottom=4),
+        )
+        self._export_format = "docx"
         self._download_btn = ft.Container(
-            content=ft.Text("\u4e0b\u8f7d Word \u6587\u6863", color=ft.Colors.WHITE,
+            content=ft.Text("\u4e0b\u8f7d\u6587\u6863", color=ft.Colors.WHITE,
                            size=14, weight=ft.FontWeight.BOLD),
             padding=ft.Padding(24, 12, 24, 12),
             bgcolor=ft.Colors.GREY_400,
@@ -253,6 +292,55 @@ class SettingsPage:
                     ]),
                     ft.Divider(height=1, color=BORDER),
                     ft.Container(height=SPACING_SM),
+                    # 快捷导出
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text("快捷导出", size=FONT_SM,
+                                    color=TEXT_SECONDARY, weight=W_MEDIUM),
+                            ft.Container(height=6),
+                            ft.Row([
+                                ft.Container(
+                                    content=ft.Text("近3天", color=ft.Colors.WHITE,
+                                                   size=12, weight=ft.FontWeight.BOLD),
+                                    padding=ft.Padding(16, 8, 16, 8),
+                                    bgcolor=COLOR_SETTINGS,
+                                    border_radius=RADIUS_XL,
+                                    ink=True,
+                                    on_click=lambda e, d=3: self._quick_export(d),
+                                ),
+                                ft.Container(
+                                    content=ft.Text("近5天", color=ft.Colors.WHITE,
+                                                   size=12, weight=ft.FontWeight.BOLD),
+                                    padding=ft.Padding(16, 8, 16, 8),
+                                    bgcolor=COLOR_SETTINGS,
+                                    border_radius=RADIUS_XL,
+                                    ink=True,
+                                    on_click=lambda e, d=5: self._quick_export(d),
+                                ),
+                                ft.Container(
+                                    content=ft.Text("近7天", color=ft.Colors.WHITE,
+                                                   size=12, weight=ft.FontWeight.BOLD),
+                                    padding=ft.Padding(16, 8, 16, 8),
+                                    bgcolor=COLOR_SETTINGS,
+                                    border_radius=RADIUS_XL,
+                                    ink=True,
+                                    on_click=lambda e, d=7: self._quick_export(d),
+                                ),
+                                ft.Container(
+                                    content=ft.Text("自定义", color=COLOR_SETTINGS,
+                                                   size=12, weight=ft.FontWeight.BOLD),
+                                    padding=ft.Padding(12, 8, 12, 8),
+                                    bgcolor=ft.Colors.with_opacity(0.10, COLOR_SETTINGS),
+                                    border_radius=RADIUS_XL,
+                                    ink=True,
+                                    on_click=self._quick_export_custom,
+                                ),
+                                self._quick_days,
+                                ft.Text("天", size=FONT_SM, color=TEXT_HINT),
+                            ], spacing=8, wrap=True),
+                        ], spacing=0),
+                    ),
+                    ft.Container(height=SPACING_SM),
                     # 日期列表（可多选）
                     *([ft.Container(
                         content=ft.Column([
@@ -269,6 +357,36 @@ class SettingsPage:
                         )
                     ]),
                     ft.Divider(height=1, color=BORDER),
+                    ft.Container(height=SPACING_SM),
+                    ft.Divider(height=1, color=BORDER),
+                    ft.Container(height=SPACING_SM),
+                    # 导出格式切换
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Text("导出格式", size=FONT_SM,
+                                    color=TEXT_SECONDARY, weight=W_MEDIUM),
+                            ft.Container(width=12),
+                            ft.Container(
+                                content=ft.Text("Word", color=COLOR_SETTINGS,
+                                               size=12, weight=ft.FontWeight.BOLD),
+                                padding=ft.Padding(12, 6, 12, 6),
+                                border=ft.Border.all(1.5, COLOR_SETTINGS),
+                                border_radius=RADIUS_MD,
+                                ink=True,
+                                on_click=lambda e: self._set_format("docx"),
+                            ),
+                            ft.Container(width=6),
+                            ft.Container(
+                                content=ft.Text("纯文本", color=TEXT_HINT,
+                                               size=12, weight=ft.FontWeight.BOLD),
+                                padding=ft.Padding(12, 6, 12, 6),
+                                border=ft.Border.all(1.5, COLOR_SETTINGS),
+                                border_radius=RADIUS_MD,
+                                ink=True,
+                                on_click=lambda e: self._set_format("txt"),
+                            ),
+                        ]),
+                    ),
                     ft.Container(height=SPACING_SM),
                     # 预览区域
                     ft.Container(
@@ -468,6 +586,9 @@ class SettingsPage:
         # 异步加载预览
         threading.Thread(target=self._load_preview, args=(selected,), daemon=True).start()
 
+    def _on_date_toggle_has_selection(self):
+        return any(cb.value for cb in self._date_checks.values())
+
     def _load_preview(self, selected):
         """加载选中日期的单词预览"""
         try:
@@ -530,47 +651,111 @@ class SettingsPage:
         self._download_btn.update()
         self._preview_container.update()
 
-    def _do_download(self, selected):
-        """生成并通过浏览器下载Word文档（手机/电脑通用）"""
+    def _do_download(self, selected, words_by_date=None):
+        """生成并通过浏览器下载文档"""
+        if self._export_format == "txt":
+            self._do_download_txt(selected, words_by_date)
+            return
         if not _DOCX_AVAILABLE:
             self.app.show_snackbar(
-                "\u7f3a\u5c11 python-docx \u5e93\uff0c\u8fd0\u884c pip install python-docx",
+                "缺少 python-docx 库，运行 pip install python-docx",
                 ERROR,
             )
             return
         try:
-            words_by_date = api_service.get_words_by_dates(selected)
+            if words_by_date is None:
+                words_by_date = api_service.get_words_by_dates(selected)
             if not words_by_date:
-                self.app.show_snackbar("\u6ca1\u6709\u6570\u636e", ERROR)
+                self.app.show_snackbar("没有数据", ERROR)
                 return
-
             docx_bytes, total = _generate_docx(words_by_date)
-            b64 = base64.b64encode(docx_bytes).decode()
-            # 构造一个自动下载的HTML页面，用Blob方式下载（解决data URI不下载的问题）
-            html = (
-                '<html><head><meta charset="utf-8"><title>\u4e0b\u8f7d</title></head><body>'
-                '<p>\u23f3 \u6b63\u5728\u4e0b\u8f7d...</p>'
-                '<script>'
-                'var b64="' + b64 + '";'
-                'var raw=atob(b64);var arr=new Uint8Array(raw.length);'
-                'for(var i=0;i<raw.length;i++){arr[i]=raw.charCodeAt(i);}'
-                'var blob=new Blob([arr],{type:"application/msword"});'
-                'var url=URL.createObjectURL(blob);'
-                'var a=document.createElement("a");'
-                'a.href=url;a.download="\u5b66\u4e60\u8bb0\u5f55.docx";'
-                'document.body.appendChild(a);a.click();'
-                'document.body.removeChild(a);'
-                'setTimeout(function(){URL.revokeObjectURL(url);},3000);'
-                'document.body.innerHTML+="<p>\u2705 \u4e0b\u8f7d\u5b8c\u6210</p>";'
-                'document.body.innerHTML+="<p>\u5982\u679c\u672a\u81ea\u52a8\u4e0b\u8f7d\uff0c\u8bf7\u957f\u6309\u4e0b\u65b9\u94fe\u63a5\u9009\u62e9\u300c\u4e0b\u8f7d\u94fe\u63a5\u300d\uff1a</p>";'
-                'document.body.innerHTML+="<a href=\'"+url+"\' download=\'\u5b66\u4e60\u8bb0\u5f55.docx\'>\ud83d\udcc4 \u5b66\u4e60\u8bb0\u5f55.docx</a>";'
-                '</script>'
-                '</body></html>'
-            )
-            self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
-            self.app.show_snackbar(f"\u5df2\u751f\u6210 {total} \u8bcd\uff0c\u6b63\u5728\u4e0b\u8f7d")
+            self._do_browser_download(docx_bytes, total, "docx")
         except Exception as ex:
-            self.app.show_snackbar(f"\u751f\u6210\u5931\u8d25\uff1a{ex}", ERROR)
+            self.app.show_snackbar(f"生成失败：{ex}", ERROR)
+
+    def _do_download_txt(self, selected, words_by_date=None):
+        """生成并通过浏览器下载纯文本"""
+        try:
+            if words_by_date is None:
+                words_by_date = api_service.get_words_by_dates(selected)
+            if not words_by_date:
+                self.app.show_snackbar("没有数据", ERROR)
+                return
+            txt_str, total = _generate_txt(words_by_date)
+            self._do_browser_download(txt_str.encode('utf-8'), total, "txt")
+        except Exception as ex:
+            self.app.show_snackbar(f"生成失败：{ex}", ERROR)
+
+    def _do_browser_download(self, data_bytes, total, fmt):
+        """通过浏览器Blob下载"""
+        b64 = base64.b64encode(data_bytes).decode()
+        ext = "docx" if fmt == "docx" else "txt"
+        mime = "application/msword" if fmt == "docx" else "text/plain"
+        html = (
+            '<html><head><meta charset="utf-8"><title>下载</title></head><body>'
+            '<p>\u23f3 正在下载...</p>'
+            '<script>'
+            'var b64="' + b64 + '";'
+            'var raw=atob(b64);var arr=new Uint8Array(raw.length);'
+            'for(var i=0;i<raw.length;i++){arr[i]=raw.charCodeAt(i);}'
+            'var blob=new Blob([arr],{type:"' + mime + '"});'
+            'var url=URL.createObjectURL(blob);'
+            'var a=document.createElement("a");'
+            'a.href=url;a.download="\u5b66\u4e60\u8bb0\u5f55.' + ext + '";'
+            'document.body.appendChild(a);a.click();'
+            'document.body.removeChild(a);'
+            'setTimeout(function(){URL.revokeObjectURL(url);},3000);'
+            'document.body.innerHTML+="<p>\u2705 下载完成</p>";'
+            'document.body.innerHTML+="<p>如果未自动下载，请长按下方链接选择「下载链接」：</p>";'
+            "document.body.innerHTML+=\"<a href='\"+url+\"' download='\\u5b66\\u4e60\\u8bb0\\u5f55." + ext + "'>[FILE] \\u5b66\\u4e60\\u8bb0\\u5f55." + ext + "</a>\";"
+            '</script>'
+            '</body></html>'
+        )
+        self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
+        self.app.show_snackbar(f"已生成 {total} 词，正在下载")
+
+    def _quick_export(self, days):
+        """快捷导出最近N天的学习记录"""
+        try:
+            words_by_date = api_service.get_recent_study_words(days)
+            if not words_by_date:
+                self.app.show_snackbar(f"近{days}天无学习记录", ERROR)
+                return
+            total = sum(len(v) for v in words_by_date.values())
+            self._do_download(None, words_by_date)
+            self.app.show_snackbar(f"已导出近{days}天共{total}词")
+        except Exception as ex:
+            self.app.show_snackbar(f"导出失败：{ex}", ERROR)
+
+    def _quick_export_custom(self, e):
+        """自定义天数导出"""
+        try:
+            days = int(self._quick_days.value)
+            if days < 1:
+                self.app.show_snackbar("天数至少为1", ERROR)
+                return
+            if days > 365:
+                self.app.show_snackbar("最多365天", ERROR)
+                return
+            self._quick_export(days)
+        except ValueError:
+            self.app.show_snackbar("请输入有效数字", ERROR)
+
+    def _set_format(self, fmt):
+        """切换导出格式"""
+        self._export_format = fmt
+        label = "Word" if fmt == "docx" else "纯文本"
+        text = f"下载 {label}" if fmt == "docx" else "下载 纯文本"
+        self._download_btn.content = ft.Container(
+            content=ft.Text(text, color=ft.Colors.WHITE,
+                           size=14, weight=ft.FontWeight.BOLD),
+            padding=ft.Padding(24, 12, 24, 12),
+            bgcolor=COLOR_SETTINGS if self._on_date_toggle_has_selection() else ft.Colors.GREY_400,
+            border_radius=RADIUS_XL,
+            ink=True,
+            on_click=self._download_btn.on_click,
+        )
+        self._download_btn.update()
 
     def _confirm_reset(self, e):
         dlg = ft.AlertDialog(

@@ -40,6 +40,7 @@ class StudyPage:
         self.new_words_done = 0
         self.total_new = 0
         self.flipped = False
+        self._counted_ids = set()  # 当天已计数的词ID（防重复）
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
         self.badge_text = ft.Text("", size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
@@ -123,6 +124,7 @@ class StudyPage:
                 self.words = words
                 self.word_index = 0
                 self.remaining_queue = []
+                self._counted_ids = set()
             self.total_new = target
             self.new_words_done = done
             # 先建按钮（_show_current_word 中会引用）
@@ -655,9 +657,8 @@ class StudyPage:
         word_id = wd.get('id', 0)
 
         if level == 'familiar':
-            # 熟悉 → 设review_interval=60天，近期不再复习
+            # 熟悉 → 3-4天后再复习（不是60天）
             api_service.record_study(word_id, 'new', 'remember')
-            # 手动覆盖为60天
             from app.services.local_db import _get_session
             from backend.models import StudyRecord
             s = _get_session()
@@ -666,22 +667,28 @@ class StudyPage:
                     StudyRecord.word_id == word_id
                 ).order_by(StudyRecord.id.desc()).first()
                 if last:
-                    last.review_interval = 60
+                    last.review_interval = 4  # 3-4天后复习
                     s.commit()
             except:
                 s.rollback()
             finally:
                 s.close()
-            self.new_words_done += 1
+            if word_id not in self._counted_ids:
+                self.new_words_done += 1
+                self._counted_ids.add(word_id)
             self._next_word()
-            self.app.show_snackbar("⭐ 已标记为熟悉，近期不再复习")
+            self.app.show_snackbar("⭐ 已标记为熟悉，3-4天后安排复习")
 
         elif level == 'vague':
-            # 模糊 → 正常艾宾浩斯
+            # 模糊 → 艾宾浩斯复习 + 今天稍后再次出现
             api_service.record_study(word_id, 'new', 'remember')
-            self.new_words_done += 1
+            if word_id not in self._counted_ids:
+                self.new_words_done += 1
+                self._counted_ids.add(word_id)
+            if word_id not in self.remaining_queue:
+                self.remaining_queue.append(word_id)
             self._next_word()
-            self.app.show_snackbar("✅ 模糊记得，按艾宾浩斯安排复习")
+            self.app.show_snackbar("✅ 模糊记得，今天稍后再次出现")
 
         else:  # forget
             # 不记得 → 重置间隔 + 今日多次出现
@@ -715,8 +722,11 @@ class StudyPage:
 
     def _update_progress(self, initial=False):
         fresh_target = max(1, self._fresh_target)
-        total = max(fresh_target, len(self.words))
-        cur = self.word_index + 1
+        total = max(fresh_target, self.total_new, len(self.words))
+        # total 固定为原始词数，不因 _reshuffle 追加而增长
+        base_total = max(fresh_target, self.total_new)
+        total = base_total
+        cur = min(self.word_index + 1, base_total)
         done = self.new_words_done
         self.progress_text.value = f"今日新词: {done}/{total}  |  当前 {cur}/{total}"
         self.badge_text.value = f"{done}/{total}"

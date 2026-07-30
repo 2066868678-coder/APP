@@ -414,6 +414,7 @@ def get_words_by_dates(date_list):
         rows = s.query(
             sa_func.date(StudyRecord.studied_at).label('study_date'),
             Word.word, Word.phonetic, Word.pos, Word.meaning,
+            Word.collocations, Word.derivatives, Word.extensions,
             StudyRecord.result,
         ).join(Word, StudyRecord.word_id == Word.id
         ).filter(
@@ -434,7 +435,48 @@ def get_words_by_dates(date_list):
                 'phonetic': r.phonetic,
                 'pos': r.pos,
                 'meaning': r.meaning,
+                'collocations': r.collocations,
+                'derivatives': r.derivatives,
+                'extensions': r.extensions,
                 'result': r.result,
+            })
+        return grouped
+    finally:
+        s.close()
+
+
+def get_recent_study_words(days: int):
+    """获取最近N天的学习单词（含完整词条信息，导出用）"""
+    s = _get_session()
+    try:
+        from sqlalchemy import func as sa_func
+        cutoff = date.today() - timedelta(days=days - 1)
+        rows = s.query(
+            sa_func.date(StudyRecord.studied_at).label('study_date'),
+            Word.word, Word.phonetic, Word.pos, Word.meaning,
+            Word.collocations, Word.derivatives, Word.extensions,
+        ).join(Word, StudyRecord.word_id == Word.id
+        ).filter(
+            sa_func.date(StudyRecord.studied_at) >= cutoff
+        ).distinct(
+            sa_func.date(StudyRecord.studied_at), Word.id
+        ).order_by(
+            sa_func.date(StudyRecord.studied_at), Word.id
+        ).all()
+
+        grouped = {}
+        for r in rows:
+            d = str(r.study_date)
+            if d not in grouped:
+                grouped[d] = []
+            grouped[d].append({
+                'word': r.word,
+                'phonetic': r.phonetic,
+                'pos': r.pos,
+                'meaning': r.meaning,
+                'collocations': r.collocations,
+                'derivatives': r.derivatives,
+                'extensions': r.extensions,
             })
         return grouped
     finally:

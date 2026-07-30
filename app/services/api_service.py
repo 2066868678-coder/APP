@@ -75,3 +75,6 @@ def get_study_dates():
 
 def get_words_by_dates(date_list):
     return local_db.get_words_by_dates(date_list)
+
+def get_recent_study_words(days):
+    return local_db.get_recent_study_words(days)
