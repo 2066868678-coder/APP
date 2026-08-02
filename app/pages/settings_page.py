@@ -5,7 +5,7 @@
 ==================
 """
 
-import sys, os, threading, io, base64, urllib.parse
+import sys, os, threading, io
 from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -652,80 +652,55 @@ class SettingsPage:
         self._preview_container.update()
 
     def _do_download(self, selected, words_by_date=None):
-        """生成并通过浏览器下载文档"""
-        if self._export_format == "txt":
-            self._do_download_txt(selected, words_by_date)
+        """按勾选日期导出（服务端路由下载，手机端可靠）"""
+        if not selected:
+            self.app.show_snackbar("请先勾选要导出的日期", ERROR)
             return
-        if not _DOCX_AVAILABLE:
+        fmt = "txt" if self._export_format == "txt" else "docx"
+        self._trigger_export(fmt, dates=selected)
+
+    def _trigger_export(self, fmt, days=None, dates=None):
+        """构建 /export 下载链接并弹出对话框（TextSpan url 导航，不走 data URL）"""
+        if fmt == "docx" and not _DOCX_AVAILABLE:
             self.app.show_snackbar(
-                "缺少 python-docx 库，运行 pip install python-docx",
-                ERROR,
-            )
+                "缺少 python-docx 库，运行 pip install python-docx", ERROR)
             return
-        try:
-            if words_by_date is None:
-                words_by_date = api_service.get_words_by_dates(selected)
-            if not words_by_date:
-                self.app.show_snackbar("没有数据", ERROR)
-                return
-            docx_bytes, total = _generate_docx(words_by_date)
-            self._do_browser_download(docx_bytes, total, "docx")
-        except Exception as ex:
-            self.app.show_snackbar(f"生成失败：{ex}", ERROR)
+        params = [f'fmt={fmt}']
+        if days:
+            params.append(f'days={days}')
+        elif dates:
+            params.append('dates=' + ','.join(dates))
+        url = '/export?' + '&'.join(params)
 
-    def _do_download_txt(self, selected, words_by_date=None):
-        """生成并通过浏览器下载纯文本"""
-        try:
-            if words_by_date is None:
-                words_by_date = api_service.get_words_by_dates(selected)
-            if not words_by_date:
-                self.app.show_snackbar("没有数据", ERROR)
-                return
-            txt_str, total = _generate_txt(words_by_date)
-            self._do_browser_download(txt_str.encode('utf-8'), total, "txt")
-        except Exception as ex:
-            self.app.show_snackbar(f"生成失败：{ex}", ERROR)
-
-    def _do_browser_download(self, data_bytes, total, fmt):
-        """通过浏览器Blob下载"""
-        b64 = base64.b64encode(data_bytes).decode()
-        ext = "docx" if fmt == "docx" else "txt"
-        mime = "application/msword" if fmt == "docx" else "text/plain"
-        html = (
-            '<html><head><meta charset="utf-8"><title>下载</title></head><body>'
-            '<p>\u23f3 正在下载...</p>'
-            '<script>'
-            'var b64="' + b64 + '";'
-            'var raw=atob(b64);var arr=new Uint8Array(raw.length);'
-            'for(var i=0;i<raw.length;i++){arr[i]=raw.charCodeAt(i);}'
-            'var blob=new Blob([arr],{type:"' + mime + '"});'
-            'var url=URL.createObjectURL(blob);'
-            'var a=document.createElement("a");'
-            'a.href=url;a.download="\u5b66\u4e60\u8bb0\u5f55.' + ext + '";'
-            'document.body.appendChild(a);a.click();'
-            'document.body.removeChild(a);'
-            'setTimeout(function(){URL.revokeObjectURL(url);},3000);'
-            'document.body.innerHTML+="<p>\u2705 下载完成</p>";'
-            'document.body.innerHTML+="<p>如果未自动下载，请长按下方链接选择「下载链接」：</p>";'
-            "document.body.innerHTML+=\"<a href='\"+url+\"' download='\\u5b66\\u4e60\\u8bb0\\u5f55." + ext + "'>[FILE] \\u5b66\\u4e60\\u8bb0\\u5f55." + ext + "</a>\";"
-            '</script>'
-            '</body></html>'
+        link = ft.Text(
+            spans=[ft.TextSpan(
+                text="⬇️ 点击这里下载文件",
+                url=url,
+                style=ft.TextStyle(size=16, color=PRIMARY,
+                                   weight=ft.FontWeight.BOLD),
+            )],
         )
-        self.page.launch_url("data:text/html," + urllib.parse.quote(html, safe=''))
-        self.app.show_snackbar(f"已生成 {total} 词，正在下载")
+        dlg = ft.AlertDialog(
+            title=ft.Text("导出学习记录"),
+            content=ft.Column([
+                link,
+                ft.Container(height=6),
+                ft.Text("如果未自动下载，点上方链接即可保存文件",
+                        size=12, color=TEXT_HINT),
+            ], tight=True, spacing=4),
+            actions=[ft.TextButton(
+                "关闭", on_click=lambda e: self.app.close_dialog(dlg))],
+            shape=ft.RoundedRectangleBorder(radius=RADIUS_MD),
+        )
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
 
     def _quick_export(self, days):
-        """快捷导出最近N天的学习记录"""
-        try:
-            words_by_date = api_service.get_recent_study_words(days)
-            if not words_by_date:
-                self.app.show_snackbar(f"近{days}天无学习记录", ERROR)
-                return
-            total = sum(len(v) for v in words_by_date.values())
-            self._do_download(None, words_by_date)
-            self.app.show_snackbar(f"已导出近{days}天共{total}词")
-        except Exception as ex:
-            self.app.show_snackbar(f"导出失败：{ex}", ERROR)
+        """快捷导出最近N天（服务端路由下载）"""
+        fmt = "txt" if self._export_format == "txt" else "docx"
+        self._trigger_export(fmt, days=days)
+        self.app.show_snackbar(f"已生成近{days}天导出文件")
 
     def _quick_export_custom(self, e):
         """自定义天数导出"""

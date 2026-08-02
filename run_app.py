@@ -271,7 +271,63 @@ speakSegment(0);
 </script></body></html>'''
         return html
 
-    # 挂载Flet应用
+    @app.get("/export")
+    async def export_words(fmt: str = Query("docx"), days: int = Query(None),
+                           dates: str = Query(None)):
+        """导出学习记录文件（docx/txt），通过 Content-Disposition 触发浏览器下载。
+
+        参数：fmt=docx|txt；days=近N天 或 dates=逗号分隔的日期(2026-08-01,2026-08-02)
+        """
+        from urllib.parse import quote
+        from fastapi.responses import Response as FastResponse
+
+        from app.services.local_db import get_recent_study_words, get_words_by_dates
+
+        # 组装数据
+        words_by_date = None
+        if days:
+            words_by_date = get_recent_study_words(days)
+        elif dates:
+            dlist = [d.strip() for d in dates.split(',') if d.strip()]
+            if dlist:
+                words_by_date = get_words_by_dates(dlist)
+        if not words_by_date:
+            return FastResponse("没有学习记录可导出", media_type="text/plain",
+                                status_code=404)
+        total = sum(len(v) for v in words_by_date.values())
+
+        # 生成文件
+        if fmt == "txt":
+            from app.pages.settings_page import _generate_txt
+            content, total2 = _generate_txt(words_by_date)
+            data = content.encode('utf-8')
+            mime = "text/plain; charset=utf-8"
+            ext = "txt"
+        else:
+            from app.pages.settings_page import _generate_docx, _DOCX_AVAILABLE
+            if not _DOCX_AVAILABLE:
+                return FastResponse("缺少 python-docx 库，无法导出 Word",
+                                    media_type="text/plain", status_code=500)
+            data, total2 = _generate_docx(words_by_date)
+            mime = ("application/vnd.openxmlformats-officedocument"
+                    ".wordprocessingml.document")
+            ext = "docx"
+
+        # RFC 5987 文件名编码（支持中文文件名）
+        fname = f"学习记录_{total}词.{ext}"
+        ascii_fname = quote(fname)
+        return FastResponse(
+            content=data,
+            media_type=mime,
+            headers={
+                "Content-Disposition": (
+                    f"attachment; filename=\"records.{ext}\"; "
+                    f"filename*=UTF-8''{ascii_fname}"
+                )
+            },
+        )
+
+    # 挂载Flet应用（放最后，避免 catch-all 拦截 /export）
     app.mount("/", flet_asgi)
 
     print("=" * 50)
