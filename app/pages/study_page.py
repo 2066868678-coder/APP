@@ -722,14 +722,11 @@ class StudyPage:
 
     def _update_progress(self, initial=False):
         fresh_target = max(1, self._fresh_target)
-        total = max(fresh_target, self.total_new, len(self.words))
         # total 固定为原始词数，不因 _reshuffle 追加而增长
         base_total = max(fresh_target, self.total_new)
-        total = base_total
-        cur = min(self.word_index + 1, base_total)
         done = self.new_words_done
-        self.progress_text.value = f"今日新词: {done}/{total}  |  当前 {cur}/{total}"
-        self.badge_text.value = f"{done}/{total}"
+        self.progress_text.value = f"今日新词: {done}/{base_total}"
+        self.badge_text.value = f"{done}/{base_total}"
         if not initial:
             self.progress_text.update()
             self.badge_text.update()
@@ -780,5 +777,5 @@ class StudyPage:
             ),
             ft.Container(expand=True),
         ])
-        self.progress_text.value = f"今日新词: {self.new_words_done}/{self.new_words_done} ✅"
+        self.progress_text.value = f"今日新词: {self.new_words_done} 个 ✅"
         self.page.update()

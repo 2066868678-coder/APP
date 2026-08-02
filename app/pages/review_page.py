@@ -93,8 +93,8 @@ class ReviewPage:
 
         if not words:
             self.card_container.content = self._build_empty()
-            self.progress_text.value = "今日复习: 0/0"
-            self.badge_text.value = "0/0"
+            self.progress_text.value = "剩余 0 个"
+            self.badge_text.value = "0"
         else:
             self.words = words
             self.review_total = len(words)
@@ -218,8 +218,8 @@ class ReviewPage:
     def _data_loaded(self, words):
         if not words:
             self.card_container.content = self._build_empty()
-            self.progress_text.value = "今日复习: 0/0"
-            self.badge_text.value = "0/0"
+            self.progress_text.value = "剩余 0 个"
+            self.badge_text.value = "0"
             self.action_buttons.visible = False
             return
         self.words = words
@@ -707,8 +707,8 @@ class ReviewPage:
 
     def _update_progress(self, initial=False):
         remaining = max(0, self.review_total - self.review_done)
-        self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total}  |  剩余 {remaining} 个"
-        self.badge_text.value = f"{self.review_done}/{self.review_total}"
+        self.progress_text.value = f"剩余 {remaining} 个"
+        self.badge_text.value = f"{remaining}"
         if not initial:
             self.progress_text.update()
             self.badge_text.update()
@@ -755,6 +755,6 @@ class ReviewPage:
             ),
             ft.Container(expand=True),
         ])
-        self.progress_text.value = f"今日复习: {self.review_done}/{self.review_total} ✅"
-        self.badge_text.value = f"{self.review_done}/{self.review_done}"
+        self.progress_text.value = f"今日复习完成 {self.review_done} 个 ✅"
+        self.badge_text.value = f"{self.review_done}"
         self.page.update()
