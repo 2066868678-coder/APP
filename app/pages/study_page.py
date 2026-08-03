@@ -41,6 +41,8 @@ class StudyPage:
         self.total_new = 0
         self.flipped = False
         self._counted_ids = set()  # 当天已计数的词ID（防重复）
+        self._since_repeat = 0     # 距上次穿插不熟词学过的词数
+        self.REPEAT_GAP = 5        # 每学5个词穿插一个"模糊/不记得"的词
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
         self.badge_text = ft.Text("", size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
@@ -129,6 +131,7 @@ class StudyPage:
                 self.word_index = 0
                 self.remaining_queue = []
                 self._counted_ids = set()
+                self._since_repeat = 0
             self.total_new = target
             self.new_words_done = done
             # 先建按钮（_show_current_word 中会引用）
@@ -703,6 +706,17 @@ class StudyPage:
 
     def _next_word(self):
         self.word_index += 1
+        # 穿插再现：每学 REPEAT_GAP 个词，把之前"模糊/不记得"的词插回队列，
+        # 直到用户点"熟悉"才放过（当天反复出现）
+        if self.remaining_queue:
+            if self._since_repeat >= self.REPEAT_GAP - 1:
+                self._since_repeat = 0
+                wid = self.remaining_queue.pop(0)
+                wd = next((x for x in self.words if x.get('id') == wid), None)
+                if wd:
+                    self.words.insert(self.word_index, wd)
+            else:
+                self._since_repeat += 1
         if self.word_index >= len(self.words) and self.remaining_queue:
             self._reshuffle()
         if self.word_index >= len(self.words):

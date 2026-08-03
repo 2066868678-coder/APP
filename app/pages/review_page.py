@@ -34,6 +34,9 @@ class ReviewPage:
         self.review_done = 0
         self.review_total = 0
         self.flipped = False
+        self._counted_ids = set()  # 当天已计数的词ID（防重复）
+        self._since_repeat = 0     # 距上次穿插不熟词复习过的词数
+        self.REPEAT_GAP = 5        # 每复习5个词穿插一个"模糊/不记得"的词
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
         self.badge_text = ft.Text("", size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
@@ -104,6 +107,8 @@ class ReviewPage:
             self.review_done = today.get('review_done', 0) if today else 0
             self.word_index = 0
             self.remaining_queue = []
+            self._counted_ids = set()
+            self._since_repeat = 0
             self._show_current_word(initial=True)
 
         return ft.Column([
@@ -230,6 +235,8 @@ class ReviewPage:
         self.review_done = 0
         self.word_index = 0
         self.remaining_queue = []
+        self._counted_ids = set()
+        self._since_repeat = 0
         self._show_current_word(initial=True)
         self.page.update()
 
@@ -689,12 +696,16 @@ class ReviewPage:
                     s.commit()
             except: s.rollback()
             finally: s.close()
-            self.review_done += 1
+            if word_id not in self._counted_ids:
+                self.review_done += 1
+                self._counted_ids.add(word_id)
             self._next_word()
             self.app.show_snackbar("⭐ 已标记为熟悉，3-4天后复习", SUCCESS)
         elif level == 'vague':
             api_service.record_study(word_id, 'review', 'remember')
-            self.review_done += 1
+            if word_id not in self._counted_ids:
+                self.review_done += 1
+                self._counted_ids.add(word_id)
             if word_id not in self.remaining_queue:
                 self.remaining_queue.append(word_id)  # 稍后再现
             self._next_word()
@@ -708,6 +719,17 @@ class ReviewPage:
 
     def _next_word(self):
         self.word_index += 1
+        # 穿插再现：每复习 REPEAT_GAP 个词，把"模糊/不记得"的词插回队列，
+        # 直到用户点"熟悉"才放过（当天反复出现）
+        if self.remaining_queue:
+            if self._since_repeat >= self.REPEAT_GAP - 1:
+                self._since_repeat = 0
+                wid = self.remaining_queue.pop(0)
+                wd = next((x for x in self.words if x.get('id') == wid), None)
+                if wd:
+                    self.words.insert(self.word_index, wd)
+            else:
+                self._since_repeat += 1
         if self.word_index >= len(self.words) and self.remaining_queue:
             self._reshuffle()
         if self.word_index >= len(self.words):
