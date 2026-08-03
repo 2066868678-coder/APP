@@ -1,0 +1,8 @@
+# 单词突围 - 部署依赖（Render服务器版，不含OCR/桌面TTS）
+flet>=0.26.0
+fastapi>=0.115.0
+uvicorn>=0.30.0
+sqlalchemy>=2.0.0
+aiosqlite>=0.20.0
+python-multipart>=0.0.9
+python-docx>=1.1.0
