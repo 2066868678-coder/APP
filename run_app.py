@@ -58,7 +58,7 @@ try:
         raise ValueError("需要导入数据")
 except Exception as e:
     print(f"正在导入单词数据... ({e})")
-    json_path = os.path.join(ROOT, 'ocr/output/words_export_完整.json')
+    json_path = os.path.join(ROOT, 'database', 'words_seed.json')
     if os.path.exists(json_path):
         from backend.models import init_database, Word, Base
         from sqlalchemy.orm import Session
