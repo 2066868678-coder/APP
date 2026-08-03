@@ -151,35 +151,3 @@ def calculate_todays_review(
     return review_ids
 
 
-def get_review_interval_description(interval: int) -> str:
-    """获取复习间隔的中文描述"""
-    descriptions = {
-        1: '明天复习',     # 第1天
-        2: '后天复习',     # 第2天
-        4: '4天后复习',    # 第4天
-        7: '一周后复习',   # 第7天
-        15: '15天后复习',  # 第15天
-        30: '一个月后复习', # 第30天
-    }
-    return descriptions.get(interval, f'{interval}天后复习')
-
-
-if __name__ == '__main__':
-    # 测试代码
-    print("艾宾浩斯遗忘曲线算法测试")
-    print("=" * 40)
-    print("标准复习间隔：", STANDARD_INTERVALS)
-    print()
-
-    # 测试1：每次都记得
-    print("例1：每次都记得 → 间隔递增")
-    schedule = get_review_schedule(date(2026, 1, 1), [True, True, True, True, True])
-    for i, d in enumerate(schedule):
-        print(f"  第{i+1}次复习：{d}")
-    print()
-
-    # 测试2：第二次忘记
-    print("例2：第2次复习忘记 → 重置为1天")
-    schedule = get_review_schedule(date(2026, 1, 1), [True, False, True, True, True])
-    for i, d in enumerate(schedule):
-        print(f"  第{i+1}次复习：{d}")

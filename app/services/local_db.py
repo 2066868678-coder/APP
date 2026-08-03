@@ -40,51 +40,6 @@ def _get_session():
 
 # ========== 单词查询 ==========
 
-def get_word_count() -> int:
-    s = _get_session()
-    try:
-        return s.query(func.count(Word.id)).scalar() or 0
-    finally:
-        s.close()
-
-
-def get_words(page=1, page_size=20, search=None):
-    s = _get_session()
-    try:
-        q = s.query(Word)
-        if search:
-            q = q.filter(Word.word.like(f'%{search}%'))
-        total = q.count()
-        words = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).offset((page-1)*page_size).limit(page_size).all()
-        return {'total': total, 'words': [w.to_dict() for w in words]}
-    finally:
-        s.close()
-
-
-def get_new_words(count=None):
-    """获取从未学过的词"""
-    if count is None:
-        saved = get_setting('daily_new_words_target', '20')
-        try:
-            count = int(saved)
-        except ValueError:
-            count = 10
-    s = _get_session()
-    try:
-        studied = s.query(StudyRecord.word_id).distinct().all()
-        studied_ids = [r[0] for r in studied]
-        q = s.query(Word)
-        if studied_ids:
-            q = q.filter(~Word.id.in_(studied_ids))
-        remaining = q.count()
-        words = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(count).all()
-        return {'words': [w.to_dict() for w in words], 'remaining': remaining}
-    finally:
-        s.close()
-
-
-# ========== 设置 ==========
-
 def get_setting(key, default=None):
     s = _get_session()
     try:
