@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 import flet as ft
 from app.theme import (
-    PRIMARY, PRIMARY_CONTAINER, SECONDARY, SURFACE, SUCCESS, ERROR, BORDER,
+    SECONDARY, SURFACE, SUCCESS, ERROR,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT,
     PAGE_PADDING, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL, SPACING_XXL,
     RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_XL, RADIUS_FULL, RADIUS_XS,
@@ -44,29 +44,42 @@ class ReviewPage:
         self.action_buttons = ft.Container(visible=False)
 
     def build(self):
-        # 持久控件刷新当前色板（模式切换后重新取色）
-        self.progress_text.color = TEXT_SECONDARY
-
-        # === 简洁页头（极简：大标题 + 进度胶囊） ===
+        # === Enhanced Header (Sky-themed) ===
         header = ft.Container(
             content=ft.Column([
                 ft.Row([
+                    # Icon with gradient background + subtle shadow
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.AUTO_STORIES, color=ft.Colors.WHITE, size=20),
+                        padding=ft.Padding(10, 10, 10, 10),
+                        gradient=GRADIENT_REVIEW,
+                        border_radius=RADIUS_MD,
+                        shadow=ft.BoxShadow(
+                            blur_radius=8, color=ft.Colors.with_opacity(0.25, SECONDARY),
+                            offset=ft.Offset(0, 2),
+                        ),
+                    ),
+                    ft.Container(width=10),
                     ft.Column([
-                        ft.Text("复习单词", size=FONT_XXL,
-                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                        ft.Text("复习单词", size=FONT_LG, weight=ft.FontWeight.BOLD,
+                                color=TEXT_PRIMARY),
                         self.progress_text,
                     ], spacing=2, expand=True),
-                    # 进度数字胶囊（纯色淡底）
+                    # Progress badge with gradient background
                     ft.Container(
                         content=self.badge_text,
-                        padding=ft.Padding(12, 5, 12, 5),
-                        bgcolor=PRIMARY_CONTAINER,
+                        padding=ft.Padding(14, 6, 14, 6),
+                        gradient=GRADIENT_REVIEW,
                         border_radius=RADIUS_FULL,
+                        shadow=ft.BoxShadow(
+                            blur_radius=6, color=ft.Colors.with_opacity(0.20, SECONDARY),
+                            offset=ft.Offset(0, 2),
+                        ),
                     ),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ], spacing=0),
             padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
-                               right=PAGE_PADDING, bottom=SPACING_MD),
+                               right=PAGE_PADDING, bottom=SPACING_SM),
         )
 
         # Action buttons with enhanced styling
@@ -99,28 +112,27 @@ class ReviewPage:
             header,
             ft.Container(content=self.card_container, expand=True),
             self.action_buttons,
-        ], spacing=0, tight=True, expand=True)
+        ], spacing=0, tight=True)
 
     def _build_action_buttons(self):
-        """操作按钮区域 — 三档熟悉程度（极简：白卡细边框+彩色图标）"""
-        def _make_button(icon, text, color, tooltip_text, result_level):
+        """操作按钮区域 — 三档熟悉程度（增强视觉风格）"""
+        def _make_button(icon, text, bg_color, tooltip_text, result_level):
             return ft.Container(
                 content=ft.Column([
-                    ft.Icon(icon, color=color, size=20),
-                    ft.Container(height=3),
-                    ft.Text(text, color=TEXT_PRIMARY, size=12,
+                    ft.Container(
+                        content=ft.Icon(icon, color=ft.Colors.WHITE, size=18),
+                        padding=ft.Padding(0, 2, 0, 0),
+                    ),
+                    ft.Text(text, color=ft.Colors.WHITE, size=11,
                             weight=ft.FontWeight.W_600),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                padding=ft.Padding(14, 12, 14, 12),
-                bgcolor=SURFACE,
-                border=ft.Border(
-                    left=ft.BorderSide(1.2, BORDER),
-                    right=ft.BorderSide(1.2, BORDER),
-                    top=ft.BorderSide(1.2, BORDER),
-                    bottom=ft.BorderSide(1.2, BORDER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                padding=ft.Padding(20, 12, 20, 12),
+                bgcolor=bg_color,
+                border_radius=RADIUS_FULL,
+                shadow=ft.BoxShadow(
+                    blur_radius=8, color=ft.Colors.with_opacity(0.25, bg_color),
+                    offset=ft.Offset(0, 3),
                 ),
-                border_radius=RADIUS_MD,
-                shadow=SHADOW_SM,
                 expand=True,
                 tooltip=tooltip_text,
                 on_click=lambda e: self._handle_result(result_level),
@@ -130,13 +142,13 @@ class ReviewPage:
         self.action_buttons = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    # 熟悉 — 绿
+                    # 熟悉 — Emerald
                     _make_button(ft.Icons.STAR, "熟悉",
                                  SUCCESS, "近期不再复习", 'familiar'),
-                    # 模糊 — 主色
+                    # 模糊 — Sky
                     _make_button(ft.Icons.AUTO_AWESOME, "模糊",
-                                 PRIMARY, "正常艾宾浩斯复习", 'vague'),
-                    # 不记得 — 红
+                                 SECONDARY, "正常艾宾浩斯复习", 'vague'),
+                    # 不记得 — Red
                     _make_button(ft.Icons.REPLAY, "不记得",
                                  ERROR, "今天多练几次", 'forget'),
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
@@ -277,7 +289,7 @@ class ReviewPage:
                                         color=TEXT_SECONDARY, italic=True,
                                         text_align=ft.TextAlign.CENTER),
                         padding=ft.Padding(16, 6, 16, 6),
-                        bgcolor=ft.Colors.with_opacity(0.06, PRIMARY),
+                        bgcolor=ft.Colors.with_opacity(0.06, SECONDARY),
                         border_radius=RADIUS_FULL,
                     ),
                     ft.Container(width=8),
@@ -288,7 +300,7 @@ class ReviewPage:
                 # Collocations preview (keep original feature)
                 *([
                     ft.Container(height=16),
-                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, PRIMARY)),
+                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, SECONDARY)),
                     ft.Container(height=4),
                     ft.Text("固定搭配（回想含义）", size=11, color=TEXT_HINT,
                             italic=True, text_align=ft.TextAlign.CENTER),
@@ -299,7 +311,7 @@ class ReviewPage:
                                         text_align=ft.TextAlign.CENTER,
                                         weight=ft.FontWeight.W_500),
                         padding=ft.Padding(8, 4, 8, 4),
-                        bgcolor=ft.Colors.with_opacity(0.06, PRIMARY),
+                        bgcolor=ft.Colors.with_opacity(0.06, SECONDARY),
                         border_radius=8,
                     ) for item in collocation_en
                 ] if collocation_en else []),
@@ -345,14 +357,14 @@ class ReviewPage:
 
         sections = []
 
-        # === 基本信息区（带发音按钮） ===
+        # === 基本信息区（带发音按钮 - 增强设计） ===
         sections.append(self._section_basic_with_audio(wd))
 
-        # === 记忆方法（放前面，整个段落一次朗读） ===
+        # === 记忆方法（暖琥珀色，放前面，整个段落一次朗读） ===
         if wd.get('memory_methods'):
             sections.append(self._section_memory_block(
-                "记忆方法", ft.Icons.LIGHTBULB_OUTLINE, wd['memory_methods'],
-                SURFACE, PRIMARY, wd['word'],
+                "💡 记忆方法", wd['memory_methods'],
+                "#FFF8E1", "#FFB300", wd['word'],
             ))
 
         # === 例句（点击显示翻译） ===
@@ -362,15 +374,15 @@ class ReviewPage:
         # === 固定搭配（带发音） ===
         if wd.get('collocations'):
             sections.append(self._section_with_audio(
-                "固定搭配", ft.Icons.LINK, wd['collocations'],
-                SURFACE, PRIMARY, wd['word'],
+                "📝 固定搭配", wd['collocations'],
+                "#E3F2FD", "#64B5F6", wd['word'],
             ))
 
         # === 派生词/扩展 ===
         if wd.get('extensions'):
             sections.append(self._sec_plain(
-                "派生词/扩展", ft.Icons.ACCOUNT_TREE_OUTLINED, wd['extensions'],
-                SURFACE, PRIMARY,
+                "🔗 派生词/扩展", wd['extensions'],
+                "#F1F8E9", "#81C784",
             ))
 
         # === 卡片背面 ===
@@ -390,7 +402,7 @@ class ReviewPage:
         self.page.update()
 
     def _section_basic_with_audio(self, wd):
-        """基本信息区 — 单词/音标/词性/释义 + 发音按钮（极简：统一主色）"""
+        """基本信息区 — 单词/音标/词性/释义 + 发音按钮（Sky主题增强设计）"""
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -408,7 +420,7 @@ class ReviewPage:
                         content=ft.Text(wd.get('pos', ''), size=FONT_SM,
                                         color=ft.Colors.WHITE),
                         padding=ft.Padding(8, 3, 8, 3),
-                        bgcolor=PRIMARY,
+                        bgcolor=SECONDARY,
                         border_radius=RADIUS_XS,
                     ) if wd.get('pos') else ft.Container(),
                 ], spacing=4),
@@ -417,18 +429,18 @@ class ReviewPage:
                         color=TEXT_PRIMARY),
             ], spacing=0),
             padding=ft.Padding(left=16, top=14, right=16, bottom=14),
-            bgcolor=SURFACE,
+            bgcolor=ft.Colors.with_opacity(0.05, SECONDARY),
             border_radius=RADIUS_SM,
             border=ft.Border(
-                left=ft.BorderSide(4, PRIMARY),
+                left=ft.BorderSide(4, SECONDARY),
                 right=ft.BorderSide(0, None),
                 top=ft.BorderSide(0, None),
                 bottom=ft.BorderSide(0, None),
             ),
         )
 
-    def _sec_plain(self, title, icon, content, bg_color, accent_color):
-        """信息区 — 带左边缘色条（极简：统一主色）"""
+    def _sec_plain(self, title, content, bg_color, accent_color):
+        """信息区 — 带左边缘色条（增强设计）"""
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
         for item in items:
@@ -451,14 +463,9 @@ class ReviewPage:
         return ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Container(
-                        content=ft.Icon(icon, size=16, color=accent_color),
-                        padding=ft.Padding(2, 0, 2, 0),
-                    ),
-                    ft.Container(width=6),
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
-                            color=TEXT_PRIMARY, expand=True),
-                ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                            color=TEXT_PRIMARY),
+                ], spacing=0),
                 ft.Container(height=8),
                 *content_parts,
             ], spacing=0),
@@ -473,8 +480,8 @@ class ReviewPage:
             ),
         )
 
-    def _section_with_audio(self, title, icon, content, bg_color, accent_color, word):
-        """信息区 — 每项带发音按钮（极简：统一主色）"""
+    def _section_with_audio(self, title, content, bg_color, accent_color, word):
+        """信息区 — 每项带发音按钮（增强设计）"""
         items = [item.strip() for item in content.split('|') if item.strip()]
         content_parts = []
         for item in items[:5]:
@@ -503,11 +510,6 @@ class ReviewPage:
         return ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Container(
-                        content=ft.Icon(icon, size=16, color=accent_color),
-                        padding=ft.Padding(2, 0, 2, 0),
-                    ),
-                    ft.Container(width=6),
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -525,16 +527,11 @@ class ReviewPage:
             ),
         )
 
-    def _section_memory_block(self, title, icon, content, bg_color, accent_color, word):
-        """记忆方法区 — 整个段落作为一整块显示，一次朗读（极简：统一主色）"""
+    def _section_memory_block(self, title, content, bg_color, accent_color, word):
+        """记忆方法区 — 整个段落作为一整块显示，一次朗读（增强设计）"""
         return ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Container(
-                        content=ft.Icon(icon, size=16, color=accent_color),
-                        padding=ft.Padding(2, 0, 2, 0),
-                    ),
-                    ft.Container(width=6),
                     ft.Text(title, size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -559,19 +556,19 @@ class ReviewPage:
         )
 
     def _build_examples_section(self, examples_text):
-        """例句区 — 默认隐藏翻译，点击展开（极简：统一主色）"""
+        """例句区 — 默认隐藏翻译，点击展开（增强设计）"""
         pairs = self._split_en_zh(examples_text)
-        ACCENT = PRIMARY
+        ACCENT = "#CE93D8"
 
         example_items = []
         for i, (en, zh) in enumerate(pairs):
             zh_row = ft.Container(
                 content=ft.Column([
-                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, ACCENT)),
+                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.25, ACCENT)),
                     ft.Container(height=6),
                     ft.Row([
                         ft.Container(
-                            content=ft.Icon(ft.Icons.TRANSLATE, size=12, color=TEXT_HINT),
+                            content=ft.Icon(ft.Icons.TRANSLATE, size=12, color=ACCENT),
                             padding=ft.Padding(2, 0, 2, 0),
                         ),
                         ft.Container(width=4),
@@ -609,12 +606,7 @@ class ReviewPage:
         return ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.FORMAT_QUOTE, size=16, color=ACCENT),
-                        padding=ft.Padding(2, 0, 2, 0),
-                    ),
-                    ft.Container(width=6),
-                    ft.Text("例句", size=FONT_BODY, weight=ft.FontWeight.BOLD,
+                    ft.Text("📖 例句", size=FONT_BODY, weight=ft.FontWeight.BOLD,
                             color=TEXT_PRIMARY, expand=True),
                     ft.Text("点击展开翻译", size=11, color=TEXT_HINT, italic=True),
                 ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -624,7 +616,7 @@ class ReviewPage:
                 *example_items,
             ], spacing=0),
             padding=ft.Padding(left=14, top=12, right=14, bottom=12),
-            bgcolor=SURFACE,
+            bgcolor="#F3E5F5",
             border_radius=RADIUS_SM,
             border=ft.Border(
                 left=ft.BorderSide(4, ACCENT),
@@ -762,7 +754,7 @@ class ReviewPage:
                     ),
                     ft.Container(height=20),
                     ft.Text("复习完成！", size=FONT_XXL, weight=ft.FontWeight.BOLD,
-                            color=PRIMARY),
+                            color=SECONDARY),
                     ft.Container(height=8),
                     ft.Text(f"今日复习 {self.review_done} 个单词",
                             size=FONT_BODY, color=TEXT_SECONDARY),

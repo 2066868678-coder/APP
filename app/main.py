@@ -17,11 +17,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import urllib.parse
 import flet as ft
-import app.theme as theme
 from app.theme import (
     PRIMARY, BACKGROUND, SURFACE,
-    TEXT_ON_PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT,
-    HEADER_PADDING_TOP,
+    TEXT_ON_PRIMARY, TEXT_SECONDARY, HEADER_PADDING_TOP,
     NAV_BAR_HEIGHT, RADIUS_MD, RADIUS_XL, SHADOW_LG,
     FONT_BODY, FONT_XS, ERROR, BORDER,
     GRADIENT_HEADER,
@@ -58,22 +56,15 @@ class WordBreakthroughApp:
         self.build_ui()
 
     def setup_page(self):
-        """设置页面属性（应用当前色板，浅色为默认）"""
-        theme.set_mode('light')
+        """设置页面属性"""
         self.page.title = self.APP_NAME
         self.page.theme = make_theme()
-        self.page.theme_mode = ft.ThemeMode.LIGHT
         self.page.padding = 0
         self.page.bgcolor = BACKGROUND
+        self.page.scroll = ft.ScrollMode.AUTO
 
     def build_ui(self):
         """构建主界面"""
-        # 浅色/深色切换按钮（浅色模式下显示"切到深色"图标）
-        self.theme_toggle_btn = ft.IconButton(
-            icon=ft.Icons.DARK_MODE_OUTLINED, icon_color=TEXT_SECONDARY,
-            tooltip="切换到深色模式", on_click=self.toggle_theme,
-        )
-
         self.page_container = ft.Container(
             content=self.home_page.build(),
             expand=True,
@@ -102,50 +93,40 @@ class WordBreakthroughApp:
             indicator_color=PRIMARY,
         )
 
-        # 内容区与导航边框（供主题切换时更新配色）
-        self.content_area = ft.Container(
-            content=self.page_container,
-            expand=True,
-            bgcolor=BACKGROUND,
-        )
-        self.nav_border = ft.Container(
-            content=self.nav_bar,
-            border=ft.Border(top=ft.BorderSide(width=0.5, color=TEXT_SECONDARY)),
-        )
-
         self.page.add(
             ft.Column([
-                # 顶部简洁标题栏（极简：白底 + 细分割线）
+                # 顶部渐变 Header
                 ft.Container(
                     content=ft.Row([
                         ft.Column([
-                            ft.Text(self.APP_NAME, size=17,
-                                    weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                            ft.Text(f"v{self.VERSION}", size=10,
-                                    color=TEXT_HINT),
-                        ], spacing=0),
+                            ft.Text(self.APP_NAME, size=20, weight=ft.FontWeight.BOLD,
+                                    color=TEXT_ON_PRIMARY),
+                            ft.Text(f"v{self.VERSION}", size=FONT_XS,
+                                    color=ft.Colors.with_opacity(0.65, TEXT_ON_PRIMARY)),
+                        ]),
                         ft.Container(expand=True),
-                        # 浅色/深色切换
-                        self.theme_toggle_btn,
                         ft.IconButton(
-                            icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_SECONDARY,
+                            icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_ON_PRIMARY,
                             tooltip="关于", on_click=self.show_about,
+                            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
                         ),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    padding=ft.Padding(left=20, right=4, top=HEADER_PADDING_TOP, bottom=10),
-                    bgcolor=SURFACE,
-                    border=ft.Border(
-                        left=ft.BorderSide(0, None),
-                        right=ft.BorderSide(0, None),
-                        top=ft.BorderSide(0, None),
-                        bottom=ft.BorderSide(width=0.5, color=BORDER),
-                    ),
+                    padding=ft.Padding(left=20, right=8, top=HEADER_PADDING_TOP, bottom=16),
+                    gradient=GRADIENT_HEADER,
+                    border_radius=ft.BorderRadius(0, 0, RADIUS_XL, RADIUS_XL),
+                    shadow=SHADOW_LG,
                 ),
-                # 页面内容（内容区固定高度，滚动由各页面内部处理，
-                # 底部导航因此固定在视口底部不随内容跳动）
-                self.content_area,
+                # 页面内容
+                ft.Container(
+                    content=self.page_container,
+                    expand=True,
+                    bgcolor=BACKGROUND,
+                ),
                 # 底部导航
-                self.nav_border,
+                ft.Container(
+                    content=self.nav_bar,
+                    border=ft.Border(top=ft.BorderSide(width=0.5, color=TEXT_SECONDARY)),
+                ),
             ],
                 spacing=0,
                 tight=True,
@@ -172,44 +153,6 @@ class WordBreakthroughApp:
             self.nav_bar.selected_index = index
             self.page_container.update()
             self.page.update()
-
-    def toggle_theme(self, e):
-        """浅色/深色模式切换"""
-        mode = theme.toggle_mode()
-        self._apply_theme()
-        self.show_snackbar(
-            "已切换到深色模式" if mode == 'dark' else "已切换到浅色模式"
-        )
-
-    def _apply_theme(self):
-        """把当前色板应用到页面框架并重建当前页面内容"""
-        mode = theme.get_mode()
-        is_dark = mode == 'dark'
-
-        # 页面级主题
-        self.page.theme = make_theme()
-        self.page.theme_mode = ft.ThemeMode.DARK if is_dark else ft.ThemeMode.LIGHT
-        self.page.bgcolor = BACKGROUND
-
-        # 内容区/导航配色
-        self.content_area.bgcolor = BACKGROUND
-        self.nav_bar.bgcolor = SURFACE
-        self.nav_bar.indicator_color = PRIMARY
-        self.nav_border.border = ft.Border(
-            top=ft.BorderSide(width=0.5, color=TEXT_SECONDARY)
-        )
-
-        # 切换按钮图标
-        self.theme_toggle_btn.icon = (
-            ft.Icons.LIGHT_MODE_OUTLINED if is_dark else ft.Icons.DARK_MODE_OUTLINED
-        )
-        self.theme_toggle_btn.tooltip = (
-            "切换到浅色模式" if is_dark else "切换到深色模式"
-        )
-
-        # 重新构建当前页面（各页面 build() 会按新色板取色）
-        self.switch_to_page(self.current_index)
-        self.page.update()
 
     def show_about(self, e):
         VERSION = "2.2.0"

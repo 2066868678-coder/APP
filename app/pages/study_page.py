@@ -50,10 +50,6 @@ class StudyPage:
         self.card_container = ft.Container(expand=True)
 
     def build(self):
-        # 持久控件刷新当前色板（模式切换后重新取色）
-        self.progress_text.color = TEXT_SECONDARY
-        self.est_text.color = TEXT_HINT
-
         # 批量获取学习页数据（1次DB会话 vs 原来4次）
         study_data = self._load_data()
         words = study_data['words']
@@ -73,35 +69,56 @@ class StudyPage:
         else:
             self.est_text.value = "所有单词已学完！ 🎉"
 
-        # === 简洁页头（极简：大标题 + 进度胶囊） ===
+        # === Enhanced Header ===
         header = ft.Container(
             content=ft.Column([
                 ft.Row([
+                    # Icon with gradient background + subtle shadow
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.MENU_BOOK, color=ft.Colors.WHITE, size=20),
+                        padding=ft.Padding(10, 10, 10, 10),
+                        gradient=GRADIENT_PRIMARY,
+                        border_radius=RADIUS_MD,
+                        shadow=ft.BoxShadow(
+                            blur_radius=8, color=ft.Colors.with_opacity(0.25, PRIMARY),
+                            offset=ft.Offset(0, 2),
+                        ),
+                    ),
+                    ft.Container(width=10),
                     ft.Column([
-                        ft.Text("学习新词", size=FONT_XXL,
-                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                        ft.Text("学习新词", size=FONT_LG, weight=ft.FontWeight.BOLD,
+                                color=TEXT_PRIMARY),
                         self.progress_text,
                     ], spacing=2, expand=True),
-                    # 进度数字胶囊（纯色淡底）
+                    # Progress badge with gradient background
                     ft.Container(
                         content=self.badge_text,
-                        padding=ft.Padding(12, 5, 12, 5),
-                        bgcolor=PRIMARY_CONTAINER,
+                        padding=ft.Padding(14, 6, 14, 6),
+                        gradient=GRADIENT_PRIMARY,
                         border_radius=RADIUS_FULL,
+                        shadow=ft.BoxShadow(
+                            blur_radius=6, color=ft.Colors.with_opacity(0.20, PRIMARY),
+                            offset=ft.Offset(0, 2),
+                        ),
                     ),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.Container(height=4),
+                ft.Container(height=6),
+                # Estimate row with cleaner icon container
                 ft.Container(
                     content=ft.Row([
-                        ft.Icon(ft.Icons.HOURGLASS_BOTTOM, size=12,
-                                color=TEXT_HINT),
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.HOURGLASS_BOTTOM, size=12,
+                                            color=TEXT_HINT),
+                            padding=ft.Padding(4, 2, 4, 2),
+                        ),
                         ft.Container(width=4),
                         self.est_text,
                     ]),
+                    padding=ft.Padding(left=2, top=0, right=2, bottom=0),
                 ),
             ], spacing=0),
             padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
-                               right=PAGE_PADDING, bottom=SPACING_MD),
+                               right=PAGE_PADDING, bottom=SPACING_SM),
         )
 
         if words:
@@ -125,29 +142,29 @@ class StudyPage:
             header,
             ft.Container(content=self.card_container, expand=True),
             self.action_buttons,
-        ], spacing=0, tight=True, expand=True)
+        ], spacing=0, tight=True)
 
     def _build_action_buttons(self):
-        """操作按钮区域 — 三档熟悉程度（极简：白卡细边框+彩色图标）"""
+        """操作按钮区域 — 三档熟悉程度（新视觉风格）"""
+        from app.theme import COLOR_REVIEW
 
-        def _make_button(icon, text, color, tooltip_text, result_level):
+        def _make_button(icon, text, bg_color, tooltip_text, result_level):
             return ft.Container(
                 content=ft.Column([
-                    ft.Icon(icon, color=color, size=20),
-                    ft.Container(height=3),
-                    ft.Text(text, color=TEXT_PRIMARY, size=12,
+                    ft.Container(
+                        content=ft.Icon(icon, color=ft.Colors.WHITE, size=18),
+                        padding=ft.Padding(0, 2, 0, 0),
+                    ),
+                    ft.Text(text, color=ft.Colors.WHITE, size=11,
                             weight=ft.FontWeight.W_600),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                padding=ft.Padding(14, 12, 14, 12),
-                bgcolor=SURFACE,
-                border=ft.Border(
-                    left=ft.BorderSide(1.2, BORDER),
-                    right=ft.BorderSide(1.2, BORDER),
-                    top=ft.BorderSide(1.2, BORDER),
-                    bottom=ft.BorderSide(1.2, BORDER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                padding=ft.Padding(20, 12, 20, 12),
+                bgcolor=bg_color,
+                border_radius=RADIUS_FULL,
+                shadow=ft.BoxShadow(
+                    blur_radius=8, color=ft.Colors.with_opacity(0.25, bg_color),
+                    offset=ft.Offset(0, 3),
                 ),
-                border_radius=RADIUS_MD,
-                shadow=SHADOW_SM,
                 expand=True,
                 tooltip=tooltip_text,
                 on_click=lambda e: self._handle_result(result_level),
@@ -157,13 +174,13 @@ class StudyPage:
         self.action_buttons = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    # 熟悉 — 绿
+                    # 熟悉 — Emerald
                     _make_button(ft.Icons.CHECK_CIRCLE_OUTLINE, "熟悉",
                                  SUCCESS, "近期不再复习", 'familiar'),
-                    # 模糊 — 主色
+                    # 模糊 — Sky
                     _make_button(ft.Icons.AUTO_AWESOME, "模糊",
-                                 PRIMARY, "正常艾宾浩斯复习", 'vague'),
-                    # 不记得 — 红
+                                 SECONDARY, "正常艾宾浩斯复习", 'vague'),
+                    # 不记得 — Rose/Red
                     _make_button(ft.Icons.REPLAY, "不记得",
                                  ERROR, "今天多练几次", 'forget'),
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
@@ -325,11 +342,11 @@ class StudyPage:
         # === 基本信息区（带发音按钮） ===
         sections.append(self._section_basic_with_audio(wd))
 
-        # === 记忆方法（放前面，整个段落一次朗读） ===
+        # === 记忆方法（暖琥珀色，放前面，整个段落一次朗读） ===
         if wd.get('memory_methods'):
             sections.append(self._section_memory_block(
                 "记忆方法", ft.Icons.LIGHTBULB_OUTLINE, wd['memory_methods'],
-                SURFACE, PRIMARY, wd['word'],
+                "#FFF8E1", "#FFB300", wd['word'],
             ))
 
         # === 例句（点击显示翻译） ===
@@ -340,14 +357,14 @@ class StudyPage:
         if wd.get('collocations'):
             sections.append(self._section_with_audio(
                 "固定搭配", ft.Icons.LINK, wd['collocations'],
-                SURFACE, PRIMARY, wd['word'],
+                "#E3F2FD", "#64B5F6", wd['word'],
             ))
 
         # === 派生词/扩展 ===
         if wd.get('extensions'):
             sections.append(self._section_info(
                 "派生词/扩展", ft.Icons.ACCOUNT_TREE_OUTLINED, wd['extensions'],
-                SURFACE, PRIMARY,
+                "#F1F8E9", "#81C784",
             ))
 
         # === 卡片背面 ===
@@ -398,7 +415,7 @@ class StudyPage:
                         color=TEXT_PRIMARY),
             ], spacing=0),
             padding=ft.Padding(left=16, top=14, right=16, bottom=14),
-            bgcolor=SURFACE,
+            bgcolor=ft.Colors.with_opacity(0.05, PRIMARY),
             border_radius=RADIUS_SM,
             border=ft.Border(
                 left=ft.BorderSide(4, PRIMARY),
@@ -494,20 +511,20 @@ class StudyPage:
         )
 
     def _build_examples_section(self, examples_text):
-        """例句区 — 默认隐藏翻译，点击展开（极简：统一主色）"""
+        """例句区 — 默认隐藏翻译，点击展开（增强设计）"""
         pairs = self._split_en_zh(examples_text)
-        ACCENT = PRIMARY
+        ACCENT = "#CE93D8"
 
         example_items = []
         for i, (en, zh) in enumerate(pairs):
             # 每条例句：英文 + 展开按钮 + (隐藏的翻译)
             zh_row = ft.Container(
                 content=ft.Column([
-                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.15, ACCENT)),
+                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.25, ACCENT)),
                     ft.Container(height=6),
                     ft.Row([
                         ft.Container(
-                            content=ft.Icon(ft.Icons.TRANSLATE, size=12, color=TEXT_HINT),
+                            content=ft.Icon(ft.Icons.TRANSLATE, size=12, color=ACCENT),
                             padding=ft.Padding(2, 0, 2, 0),
                         ),
                         ft.Container(width=4),
@@ -560,7 +577,7 @@ class StudyPage:
                 *example_items,
             ], spacing=0),
             padding=ft.Padding(left=14, top=12, right=14, bottom=12),
-            bgcolor=SURFACE,
+            bgcolor="#F3E5F5",
             border_radius=RADIUS_SM,
             border=ft.Border(
                 left=ft.BorderSide(4, ACCENT),

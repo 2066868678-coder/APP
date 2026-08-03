@@ -67,9 +67,9 @@ class StatisticsPage:
                         ft.Row([
                             ft.Container(
                                 content=ft.Icon(ft.Icons.BAR_CHART,
-                                                color=PRIMARY, size=18),
+                                                color=COLOR_STATS, size=18),
                                 padding=ft.Padding(6, 6, 6, 6),
-                                bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
+                                bgcolor=ft.Colors.with_opacity(0.10, COLOR_STATS),
                                 border_radius=8,
                             ),
                             ft.Container(width=8),
@@ -80,21 +80,21 @@ class StatisticsPage:
                         ft.Container(height=SPACING_SM),
                         ft.Row([
                             self._ov("总单词", str(total),
-                                     ft.Icons.LIBRARY_BOOKS, PRIMARY),
+                                     ft.Icons.LIBRARY_BOOKS, COLOR_STATS),
                             self._ov("已学习", str(learned),
-                                     ft.Icons.CHECK_CIRCLE, PRIMARY),
+                                     ft.Icons.CHECK_CIRCLE, SUCCESS),
                         ], spacing=SPACING_SM),
                         ft.Container(height=SPACING_SM),
                         ft.Row([
                             self._ov("已掌握", str(mastered),
-                                     ft.Icons.STARS, PRIMARY),
+                                     ft.Icons.STARS, WARNING),
                             self._ov("未学习", str(unlearned),
-                                     ft.Icons.HOURGLASS_EMPTY, PRIMARY),
+                                     ft.Icons.HOURGLASS_EMPTY, TEXT_HINT),
                         ], spacing=SPACING_SM),
                         ft.Container(height=SPACING_XL),
                         ft.Row([
                             ft.Text("总进度", size=FONT_SM, color=TEXT_SECONDARY),
-                            ft.Text(f"{pct}%", size=FONT_SM, color=PRIMARY,
+                            ft.Text(f"{pct}%", size=FONT_SM, color=COLOR_STATS,
                                     weight=ft.FontWeight.BOLD),
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         ft.Container(height=SPACING_XS),
@@ -123,14 +123,14 @@ class StatisticsPage:
                         ft.Container(height=SPACING_SM),
                         ft.Row([
                             self._today_mini("新学", str(today_new),
-                                             ft.Icons.PLAY_ARROW, PRIMARY),
+                                             ft.Icons.PLAY_ARROW, SUCCESS),
                             self._today_mini("复习", str(today_review),
-                                             ft.Icons.AUTO_STORIES, PRIMARY),
+                                             ft.Icons.AUTO_STORIES, SECONDARY),
                             self._today_mini("学习天数", str(study_days),
-                                             ft.Icons.CALENDAR_MONTH, PRIMARY),
+                                             ft.Icons.CALENDAR_MONTH, COLOR_STATS),
                             self._today_mini("连续", f"{streak}天",
                                              ft.Icons.LOCAL_FIRE_DEPARTMENT,
-                                             PRIMARY),
+                                             WARNING if streak > 0 else TEXT_HINT),
                         ], spacing=4),
                     ], spacing=0),
                 ),
@@ -157,7 +157,7 @@ class StatisticsPage:
                         self._stacked_bar(unlearned, learning, mastered, total),
                         ft.Container(height=SPACING_MD),
                         ft.Row([
-                            self._seg_label("未学习", unlearned, total, TEXT_HINT),
+                            self._seg_label("未学习", unlearned, total, "#94A3B8"),
                             self._seg_label("学习中", learning, total, SECONDARY),
                             self._seg_label("已掌握", mastered, total, COLOR_STATS),
                         ], spacing=SPACING_SM),
@@ -244,7 +244,7 @@ class StatisticsPage:
                     expand=fill,
                     height=8,
                     gradient=ft.LinearGradient(
-                        colors=[PRIMARY, PRIMARY],
+                        colors=[PRIMARY, COLOR_STATS],
                         begin=ft.Alignment(-1, 0),
                         end=ft.Alignment(1, 0),
                     ),
@@ -313,7 +313,7 @@ class StatisticsPage:
         m = int(max(mastered, 1))
         return ft.Container(
             content=ft.Row([
-                ft.Container(expand=u, height=14, bgcolor=TEXT_HINT),
+                ft.Container(expand=u, height=14, bgcolor="#94A3B8"),
                 ft.Container(expand=l, height=14, bgcolor=SECONDARY),
                 ft.Container(expand=m, height=14, bgcolor=COLOR_STATS),
             ], spacing=0),
