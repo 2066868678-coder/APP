@@ -13,6 +13,7 @@ import flet as ft
 from app.theme import (
     PRIMARY, PRIMARY_LIGHT, SECONDARY, BACKGROUND, SURFACE,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, SUCCESS, ERROR, WARNING,
+    COLOR_STATS,
     PAGE_PADDING, CARD_GAP,
     SPACING_XS, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL,
     RADIUS_XS, RADIUS_SM, RADIUS_MD,
@@ -243,7 +244,7 @@ class StatisticsPage:
                     expand=fill,
                     height=8,
                     gradient=ft.LinearGradient(
-                        colors=[PRIMARY, COLOR_STATS],
+                        colors=[PRIMARY, PRIMARY],
                         begin=ft.Alignment(-1, 0),
                         end=ft.Alignment(1, 0),
                     ),
