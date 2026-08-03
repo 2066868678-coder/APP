@@ -14,13 +14,13 @@ import flet as ft
 from app.theme import (
     PRIMARY, PRIMARY_LIGHT, SECONDARY, BACKGROUND, SURFACE,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, TEXT_ON_PRIMARY,
+    SUCCESS,
     PAGE_PADDING, CARD_GAP,
     RADIUS_MD, RADIUS_LG, RADIUS_XL, RADIUS_SM, RADIUS_FULL,
     FONT_XS, FONT_SM, FONT_LG, FONT_XL, FONT_XXL, FONT_XXXL, FONT_BODY,
     GRADIENT_PRIMARY,
     SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL, SPACING_XXL,
     SHADOW_CARD, SHADOW_SM,
-    COLOR_LEARN, COLOR_REVIEW, COLOR_STATS, COLOR_SETTINGS,
 )
 from app.services import api_service
 
@@ -101,10 +101,10 @@ class HomePage:
                                 ft.Container(width=4),
                                 ft.Text(f"连续 {streak} 天",
                                         size=FONT_SM, weight=ft.FontWeight.W_600,
-                                        color="#92400E"),
+                                        color=PRIMARY),
                             ], spacing=0),
                             padding=ft.Padding(10, 4, 12, 4),
-                            bgcolor=ft.Colors.with_opacity(0.15, "#F59E0B"),
+                            bgcolor=ft.Colors.with_opacity(0.08, PRIMARY),
                             border_radius=RADIUS_FULL,
                         ),
                     ], spacing=0),
@@ -129,7 +129,7 @@ class HomePage:
 
         # --- Total progress bar ---
         def _build_progress_bar():
-            fill_color = GRADIENT_PRIMARY if progress_pct < 100 else ft.Colors.GREEN_400
+            fill_color = GRADIENT_PRIMARY if progress_pct < 100 else SUCCESS
             return ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -163,7 +163,7 @@ class HomePage:
         def _task_card(icon, label, done, target, color, has_active, page_idx):
             pct = min(done / target, 1.0) if target > 0 else 0
             completed = done >= target
-            fill = ft.Colors.GREEN_400 if completed else color
+            fill = SUCCESS if completed else color
             return ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -179,11 +179,11 @@ class HomePage:
                             content=ft.Text(
                                 "已完成" if completed else f"{done}/{target}",
                                 size=FONT_XS,
-                                color=ft.Colors.GREEN_600 if completed else TEXT_SECONDARY,
+                                color=SUCCESS if completed else TEXT_SECONDARY,
                                 weight=ft.FontWeight.W_600,
                             ),
                             padding=ft.Padding(8, 3, 8, 3),
-                            bgcolor=ft.Colors.GREEN_50 if completed
+                            bgcolor=ft.Colors.with_opacity(0.10, SUCCESS) if completed
                                     else ft.Colors.with_opacity(0.06, TEXT_SECONDARY),
                             border_radius=RADIUS_SM,
                         ),
@@ -240,7 +240,7 @@ class HomePage:
                                new_done, new_target, PRIMARY, has_study, 1),
                     ft.Container(width=CARD_GAP),
                     _task_card(ft.Icons.AUTO_STORIES_OUTLINED, "复习",
-                               review_done, review_target, SECONDARY, has_review, 2),
+                               review_done, review_target, PRIMARY, has_review, 2),
                 ]),
             ]),
             padding=ft.Padding(SPACING_XL, SPACING_LG, SPACING_XL, SPACING_LG),
@@ -253,19 +253,21 @@ class HomePage:
             ),
         )
 
-        # --- Quick action buttons ---
+        # --- Quick action buttons（极简：统一主色） ---
         btn_configs = [
-            ("学习", ft.Icons.MENU_BOOK, COLOR_LEARN, 1),
-            ("复习", ft.Icons.AUTO_STORIES, COLOR_REVIEW, 2),
-            ("统计", ft.Icons.BAR_CHART, COLOR_STATS, 3),
-            ("设置", ft.Icons.SETTINGS, COLOR_SETTINGS, 4),
+            ("学习", ft.Icons.MENU_BOOK, 1),
+            ("复习", ft.Icons.AUTO_STORIES, 2),
+            ("统计", ft.Icons.BAR_CHART, 3),
+            ("设置", ft.Icons.SETTINGS, 4),
         ]
 
         quick_actions = ft.Row(
-            [self._big_btn(lb, ic, cl, idx) for lb, ic, cl, idx in btn_configs],
+            [self._big_btn(lb, ic, idx) for lb, ic, idx in btn_configs],
         )
 
         # --- Assemble page ---
+        # expand=True 使内部 Column 的滚动获得有界高度：
+        # 内容在这里滚动，底部导航固定在视口底部
         content = ft.Container(
             content=ft.Column([
                 greeting_section,
@@ -281,16 +283,17 @@ class HomePage:
                 scroll=ft.ScrollMode.AUTO,
             ),
             padding=ft.Padding(PAGE_PADDING, PAGE_PADDING, PAGE_PADDING, 0),
+            expand=True,
         )
         self._container.content = content
 
-    def _big_btn(self, label, icon, color, page_idx):
+    def _big_btn(self, label, icon, page_idx):
         return ft.Container(
             content=ft.Column([
                 ft.Container(
                     content=ft.Icon(icon, size=22, color=TEXT_ON_PRIMARY),
                     width=44, height=44,
-                    bgcolor=ft.Colors.with_opacity(0.15, color),
+                    bgcolor=ft.Colors.with_opacity(0.15, PRIMARY),
                     border_radius=12,
                     alignment=ft.alignment.Alignment(0, 0),
                 ),

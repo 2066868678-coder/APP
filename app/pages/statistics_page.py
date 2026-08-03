@@ -13,7 +13,6 @@ import flet as ft
 from app.theme import (
     PRIMARY, PRIMARY_LIGHT, SECONDARY, BACKGROUND, SURFACE,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, SUCCESS, ERROR, WARNING,
-    COLOR_STATS,
     PAGE_PADDING, CARD_GAP,
     SPACING_XS, SPACING_SM, SPACING_MD, SPACING_LG, SPACING_XL,
     RADIUS_XS, RADIUS_SM, RADIUS_MD,
@@ -67,9 +66,9 @@ class StatisticsPage:
                         ft.Row([
                             ft.Container(
                                 content=ft.Icon(ft.Icons.BAR_CHART,
-                                                color=COLOR_STATS, size=18),
+                                                color=PRIMARY, size=18),
                                 padding=ft.Padding(6, 6, 6, 6),
-                                bgcolor=ft.Colors.with_opacity(0.10, COLOR_STATS),
+                                bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
                                 border_radius=8,
                             ),
                             ft.Container(width=8),
@@ -80,21 +79,21 @@ class StatisticsPage:
                         ft.Container(height=SPACING_SM),
                         ft.Row([
                             self._ov("总单词", str(total),
-                                     ft.Icons.LIBRARY_BOOKS, COLOR_STATS),
+                                     ft.Icons.LIBRARY_BOOKS, PRIMARY),
                             self._ov("已学习", str(learned),
-                                     ft.Icons.CHECK_CIRCLE, SUCCESS),
+                                     ft.Icons.CHECK_CIRCLE, PRIMARY),
                         ], spacing=SPACING_SM),
                         ft.Container(height=SPACING_SM),
                         ft.Row([
                             self._ov("已掌握", str(mastered),
-                                     ft.Icons.STARS, WARNING),
+                                     ft.Icons.STARS, PRIMARY),
                             self._ov("未学习", str(unlearned),
-                                     ft.Icons.HOURGLASS_EMPTY, TEXT_HINT),
+                                     ft.Icons.HOURGLASS_EMPTY, PRIMARY),
                         ], spacing=SPACING_SM),
                         ft.Container(height=SPACING_XL),
                         ft.Row([
                             ft.Text("总进度", size=FONT_SM, color=TEXT_SECONDARY),
-                            ft.Text(f"{pct}%", size=FONT_SM, color=COLOR_STATS,
+                            ft.Text(f"{pct}%", size=FONT_SM, color=PRIMARY,
                                     weight=ft.FontWeight.BOLD),
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         ft.Container(height=SPACING_XS),
@@ -123,14 +122,14 @@ class StatisticsPage:
                         ft.Container(height=SPACING_SM),
                         ft.Row([
                             self._today_mini("新学", str(today_new),
-                                             ft.Icons.PLAY_ARROW, SUCCESS),
+                                             ft.Icons.PLAY_ARROW, PRIMARY),
                             self._today_mini("复习", str(today_review),
-                                             ft.Icons.AUTO_STORIES, SECONDARY),
+                                             ft.Icons.AUTO_STORIES, PRIMARY),
                             self._today_mini("学习天数", str(study_days),
-                                             ft.Icons.CALENDAR_MONTH, COLOR_STATS),
+                                             ft.Icons.CALENDAR_MONTH, PRIMARY),
                             self._today_mini("连续", f"{streak}天",
                                              ft.Icons.LOCAL_FIRE_DEPARTMENT,
-                                             WARNING if streak > 0 else TEXT_HINT),
+                                             PRIMARY),
                         ], spacing=4),
                     ], spacing=0),
                 ),
@@ -157,7 +156,7 @@ class StatisticsPage:
                         self._stacked_bar(unlearned, learning, mastered, total),
                         ft.Container(height=SPACING_MD),
                         ft.Row([
-                            self._seg_label("未学习", unlearned, total, "#94A3B8"),
+                            self._seg_label("未学习", unlearned, total, TEXT_HINT),
                             self._seg_label("学习中", learning, total, SECONDARY),
                             self._seg_label("已掌握", mastered, total, COLOR_STATS),
                         ], spacing=SPACING_SM),
@@ -313,7 +312,7 @@ class StatisticsPage:
         m = int(max(mastered, 1))
         return ft.Container(
             content=ft.Row([
-                ft.Container(expand=u, height=14, bgcolor="#94A3B8"),
+                ft.Container(expand=u, height=14, bgcolor=TEXT_HINT),
                 ft.Container(expand=l, height=14, bgcolor=SECONDARY),
                 ft.Container(expand=m, height=14, bgcolor=COLOR_STATS),
             ], spacing=0),

@@ -18,6 +18,7 @@ from app.theme import (
     SHADOW_SM, SHADOW_MD,
     FONT_XS, FONT_SM, FONT_BODY, FONT_LG,
     COLOR_SETTINGS, BORDER, W_MEDIUM, W_SEMIBOLD,
+    GRADIENT_PRIMARY,
 )
 from app.components.app_card import AppCard
 from app.services import api_service, local_db
@@ -159,6 +160,13 @@ class SettingsPage:
         )
 
     def build(self):
+        # 持久控件刷新当前色板（模式切换后重新取色）
+        self._target_value.border_color = COLOR_SETTINGS
+        self._target_value.focused_border_color = COLOR_SETTINGS
+        self._quick_days.border_color = COLOR_SETTINGS
+        self._quick_days.focused_border_color = COLOR_SETTINGS
+        self._download_btn.bgcolor = ft.Colors.GREY_400
+
         # 加载学习日期
         dates = []
         try:
@@ -254,11 +262,7 @@ class SettingsPage:
                                         size=14, weight=ft.FontWeight.BOLD),
                             ]),
                             padding=ft.Padding(20, 10, 20, 10),
-                            gradient=ft.LinearGradient(
-                                colors=["#64748B", "#94A3B8"],
-                                begin=ft.Alignment(-1, 0),
-                                end=ft.Alignment(1, 0),
-                            ),
+                            gradient=GRADIENT_PRIMARY,
                             border_radius=RADIUS_MD,
                             ink=True,
                             on_click=self._save_target,
@@ -425,9 +429,9 @@ class SettingsPage:
                 content=ft.Column([
                     ft.Row([
                         ft.Container(
-                            content=ft.Icon(ft.Icons.STORAGE, color="#FF8F00", size=18),
+                            content=ft.Icon(ft.Icons.STORAGE, color=PRIMARY, size=18),
                             padding=ft.Padding(6, 6, 6, 6),
-                            bgcolor=ft.Colors.with_opacity(0.10, "#FF8F00"),
+                            bgcolor=ft.Colors.with_opacity(0.10, PRIMARY),
                             border_radius=8,
                         ),
                         ft.Container(width=8),
