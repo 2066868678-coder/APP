@@ -69,9 +69,8 @@ class WordBreakthroughApp:
         """构建主界面"""
         # 浅色/深色切换按钮（浅色模式下显示"切到深色"图标）
         self.theme_toggle_btn = ft.IconButton(
-            icon=ft.Icons.DARK_MODE_OUTLINED, icon_color=TEXT_ON_PRIMARY,
+            icon=ft.Icons.DARK_MODE_OUTLINED, icon_color=TEXT_SECONDARY,
             tooltip="切换到深色模式", on_click=self.toggle_theme,
-            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
         )
 
         self.page_container = ft.Container(
@@ -115,28 +114,31 @@ class WordBreakthroughApp:
 
         self.page.add(
             ft.Column([
-                # 顶部渐变 Header
+                # 顶部简洁标题栏（极简：白底 + 细分割线）
                 ft.Container(
                     content=ft.Row([
                         ft.Column([
-                            ft.Text(self.APP_NAME, size=20, weight=ft.FontWeight.BOLD,
-                                    color=TEXT_ON_PRIMARY),
-                            ft.Text(f"v{self.VERSION}", size=FONT_XS,
-                                    color=ft.Colors.with_opacity(0.65, TEXT_ON_PRIMARY)),
-                        ]),
+                            ft.Text(self.APP_NAME, size=17,
+                                    weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                            ft.Text(f"v{self.VERSION}", size=10,
+                                    color=TEXT_HINT),
+                        ], spacing=0),
                         ft.Container(expand=True),
                         # 浅色/深色切换
                         self.theme_toggle_btn,
                         ft.IconButton(
-                            icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_ON_PRIMARY,
+                            icon=ft.Icons.INFO_OUTLINE, icon_color=TEXT_SECONDARY,
                             tooltip="关于", on_click=self.show_about,
-                            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
                         ),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    padding=ft.Padding(left=20, right=8, top=HEADER_PADDING_TOP, bottom=16),
-                    gradient=GRADIENT_HEADER,
-                    border_radius=ft.BorderRadius(0, 0, RADIUS_XL, RADIUS_XL),
-                    shadow=SHADOW_LG,
+                    padding=ft.Padding(left=20, right=4, top=HEADER_PADDING_TOP, bottom=10),
+                    bgcolor=SURFACE,
+                    border=ft.Border(
+                        left=ft.BorderSide(0, None),
+                        right=ft.BorderSide(0, None),
+                        top=ft.BorderSide(0, None),
+                        bottom=ft.BorderSide(width=0.5, color=BORDER),
+                    ),
                 ),
                 # 页面内容（内容区固定高度，滚动由各页面内部处理，
                 # 底部导航因此固定在视口底部不随内容跳动）

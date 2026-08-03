@@ -73,56 +73,35 @@ class StudyPage:
         else:
             self.est_text.value = "所有单词已学完！ 🎉"
 
-        # === Enhanced Header ===
+        # === 简洁页头（极简：大标题 + 进度胶囊） ===
         header = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    # Icon with gradient background + subtle shadow
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.MENU_BOOK, color=ft.Colors.WHITE, size=20),
-                        padding=ft.Padding(10, 10, 10, 10),
-                        gradient=GRADIENT_PRIMARY,
-                        border_radius=RADIUS_MD,
-                        shadow=ft.BoxShadow(
-                            blur_radius=8, color=ft.Colors.with_opacity(0.25, PRIMARY),
-                            offset=ft.Offset(0, 2),
-                        ),
-                    ),
-                    ft.Container(width=10),
                     ft.Column([
-                        ft.Text("学习新词", size=FONT_LG, weight=ft.FontWeight.BOLD,
-                                color=TEXT_PRIMARY),
+                        ft.Text("学习新词", size=FONT_XXL,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                         self.progress_text,
                     ], spacing=2, expand=True),
-                    # Progress badge with gradient background
+                    # 进度数字胶囊（纯色淡底）
                     ft.Container(
                         content=self.badge_text,
-                        padding=ft.Padding(14, 6, 14, 6),
-                        gradient=GRADIENT_PRIMARY,
+                        padding=ft.Padding(12, 5, 12, 5),
+                        bgcolor=PRIMARY_CONTAINER,
                         border_radius=RADIUS_FULL,
-                        shadow=ft.BoxShadow(
-                            blur_radius=6, color=ft.Colors.with_opacity(0.20, PRIMARY),
-                            offset=ft.Offset(0, 2),
-                        ),
                     ),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.Container(height=6),
-                # Estimate row with cleaner icon container
+                ft.Container(height=4),
                 ft.Container(
                     content=ft.Row([
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.HOURGLASS_BOTTOM, size=12,
-                                            color=TEXT_HINT),
-                            padding=ft.Padding(4, 2, 4, 2),
-                        ),
+                        ft.Icon(ft.Icons.HOURGLASS_BOTTOM, size=12,
+                                color=TEXT_HINT),
                         ft.Container(width=4),
                         self.est_text,
                     ]),
-                    padding=ft.Padding(left=2, top=0, right=2, bottom=0),
                 ),
             ], spacing=0),
             padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
-                               right=PAGE_PADDING, bottom=SPACING_SM),
+                               right=PAGE_PADDING, bottom=SPACING_MD),
         )
 
         if words:
@@ -146,28 +125,29 @@ class StudyPage:
             header,
             ft.Container(content=self.card_container, expand=True),
             self.action_buttons,
-        ], spacing=0, tight=True)
+        ], spacing=0, tight=True, expand=True)
 
     def _build_action_buttons(self):
-        """操作按钮区域 — 三档熟悉程度（新视觉风格）"""
+        """操作按钮区域 — 三档熟悉程度（极简：白卡细边框+彩色图标）"""
 
-        def _make_button(icon, text, bg_color, tooltip_text, result_level):
+        def _make_button(icon, text, color, tooltip_text, result_level):
             return ft.Container(
                 content=ft.Column([
-                    ft.Container(
-                        content=ft.Icon(icon, color=ft.Colors.WHITE, size=18),
-                        padding=ft.Padding(0, 2, 0, 0),
-                    ),
-                    ft.Text(text, color=ft.Colors.WHITE, size=11,
+                    ft.Icon(icon, color=color, size=20),
+                    ft.Container(height=3),
+                    ft.Text(text, color=TEXT_PRIMARY, size=12,
                             weight=ft.FontWeight.W_600),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
-                padding=ft.Padding(20, 12, 20, 12),
-                bgcolor=bg_color,
-                border_radius=RADIUS_FULL,
-                shadow=ft.BoxShadow(
-                    blur_radius=8, color=ft.Colors.with_opacity(0.25, bg_color),
-                    offset=ft.Offset(0, 3),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                padding=ft.Padding(14, 12, 14, 12),
+                bgcolor=SURFACE,
+                border=ft.Border(
+                    left=ft.BorderSide(1.2, BORDER),
+                    right=ft.BorderSide(1.2, BORDER),
+                    top=ft.BorderSide(1.2, BORDER),
+                    bottom=ft.BorderSide(1.2, BORDER),
                 ),
+                border_radius=RADIUS_MD,
+                shadow=SHADOW_SM,
                 expand=True,
                 tooltip=tooltip_text,
                 on_click=lambda e: self._handle_result(result_level),
@@ -177,13 +157,13 @@ class StudyPage:
         self.action_buttons = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    # 熟悉 — Emerald
+                    # 熟悉 — 绿
                     _make_button(ft.Icons.CHECK_CIRCLE_OUTLINE, "熟悉",
                                  SUCCESS, "近期不再复习", 'familiar'),
-                    # 模糊 — Sky
+                    # 模糊 — 主色
                     _make_button(ft.Icons.AUTO_AWESOME, "模糊",
-                                 SECONDARY, "正常艾宾浩斯复习", 'vague'),
-                    # 不记得 — Rose/Red
+                                 PRIMARY, "正常艾宾浩斯复习", 'vague'),
+                    # 不记得 — 红
                     _make_button(ft.Icons.REPLAY, "不记得",
                                  ERROR, "今天多练几次", 'forget'),
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),

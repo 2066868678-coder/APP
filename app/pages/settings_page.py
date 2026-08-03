@@ -225,6 +225,7 @@ class SettingsPage:
                 about_rows.append(ft.Divider(height=1, color=BORDER))
 
         return ft.Container(
+            expand=True,
             content=ft.ListView([
                 # ================================================================
                 # 每日学习目标

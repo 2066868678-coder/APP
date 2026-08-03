@@ -28,51 +28,51 @@ import flet as ft
 # 色板定义 Palette（浅色 LIGHT / 深色 DARK）
 # ============================================================
 _LIGHT = {
-    'PRIMARY': "#4F46E5",            # Indigo 600 — 主色
-    'PRIMARY_DARK': "#3730A3",       # Indigo 800
+    'PRIMARY': "#4F46E5",            # Indigo 600 — 主色（仅强调）
+    'PRIMARY_DARK': "#4338CA",       # Indigo 700
     'PRIMARY_LIGHT': "#A5B4FC",      # Indigo 200
     'PRIMARY_CONTAINER': "#EEF2FF",  # Indigo 50
-    'SECONDARY': "#0EA5E9",          # Sky 500 — 模糊档/次要强调
-    'BACKGROUND': "#F8FAFC",         # 极浅灰 — 页面背景
+    'SECONDARY': "#64748B",          # Slate 500 — 中性辅助
+    'BACKGROUND': "#F6F7F9",         # 浅暖灰 — 页面背景
     'SURFACE': "#FFFFFF",            # 白 — 卡片底色
     'SUCCESS': "#16A34A",            # Green 600 — 记得/完成
     'ERROR': "#DC2626",              # Red 600 — 忘记/重置
-    'WARNING': "#F59E0B",            # Amber 500 — 警告
+    'WARNING': "#D97706",            # Amber 600 — 警告
     'WARM_LIGHT': "#FFF8E1",         # Amber 50（保留兼容）
-    'TEXT_PRIMARY': "#111827",       # 主要正文
-    'TEXT_SECONDARY': "#6B7280",     # 次要文字
-    'TEXT_HINT': "#94A3B8",          # 提示文字
+    'TEXT_PRIMARY': "#1B1F27",       # 主要正文
+    'TEXT_SECONDARY': "#697386",     # 次要文字
+    'TEXT_HINT': "#9AA3B2",          # 提示文字
     'TEXT_ON_PRIMARY': "#FFFFFF",    # 主色上的文字
-    'PROGRESS_BG': "#E5E7EB",        # 进度条背景
-    'BORDER': "#E5E7EB",             # 分割线/边框
+    'PROGRESS_BG': "#E8EAF0",        # 进度条背景
+    'BORDER': "#EAECF1",             # 分割线/边框
     'COLOR_LEARN': "#4F46E5",        # 学习页主色（统一主色）
-    'COLOR_REVIEW': "#0EA5E9",       # 复习页主色（统一主色）
+    'COLOR_REVIEW': "#4F46E5",       # 复习页主色（统一主色）
     'COLOR_STATS': "#4F46E5",        # 统计页主色（统一主色）
     'COLOR_SETTINGS': "#4F46E5",     # 设置页主色（统一主色）
 }
 
 _DARK = {
-    'PRIMARY': "#818CF8",            # Indigo 300 — 暗色下更亮
+    'PRIMARY': "#7C86FF",            # Indigo 300 — 暗色下更亮
     'PRIMARY_DARK': "#6366F1",       # Indigo 400
-    'PRIMARY_LIGHT': "#C7D2FE",      # Indigo 200
-    'PRIMARY_CONTAINER': "#312E81",  # Indigo 900
-    'SECONDARY': "#38BDF8",          # Sky 400
-    'BACKGROUND': "#0F172A",         # Slate 900 — 页面背景
-    'SURFACE': "#1F2937",            # Slate 800 — 卡片底色
+    'PRIMARY_LIGHT': "#A5B4FC",      # Indigo 200
+    'PRIMARY_CONTAINER': "#2A2F4A",  # Indigo 900
+    'SECONDARY': "#7C8BA1",          # Slate 400 — 中性辅助
+    'BACKGROUND': "#0F1218",         # 近黑蓝 — 页面背景
+    'SURFACE': "#171C26",            # 深灰蓝 — 卡片底色
     'SUCCESS': "#34D399",            # Emerald 400
     'ERROR': "#F87171",              # Red 400
     'WARNING': "#FBBF24",            # Amber 400
-    'WARM_LIGHT': "#451A03",
-    'TEXT_PRIMARY': "#F9FAFB",       # 主要正文
-    'TEXT_SECONDARY': "#9CA3AF",     # 次要文字
-    'TEXT_HINT': "#6B7280",          # 提示文字
+    'WARM_LIGHT': "#2A1F0E",
+    'TEXT_PRIMARY': "#F2F4F8",       # 主要正文
+    'TEXT_SECONDARY': "#A0A9BA",     # 次要文字
+    'TEXT_HINT': "#6E7686",          # 提示文字
     'TEXT_ON_PRIMARY': "#FFFFFF",
-    'PROGRESS_BG': "#374151",        # Slate 700
-    'BORDER': "#374151",             # Slate 700
-    'COLOR_LEARN': "#818CF8",
-    'COLOR_REVIEW': "#38BDF8",
-    'COLOR_STATS': "#818CF8",
-    'COLOR_SETTINGS': "#818CF8",
+    'PROGRESS_BG': "#2A3040",        # 进度条背景
+    'BORDER': "#242B37",             # 分割线/边框
+    'COLOR_LEARN': "#7C86FF",
+    'COLOR_REVIEW': "#7C86FF",
+    'COLOR_STATS': "#7C86FF",
+    'COLOR_SETTINGS': "#7C86FF",
 }
 
 # 成就徽章色（极简：统一主色，仅靠解锁态透明度区分）
@@ -102,24 +102,24 @@ def get_mode() -> str:
 
 
 def _make_gradients(palette):
-    """按当前色板生成渐变对象"""
+    """按当前色板生成"纯色化"渐变对象（极简风格：视觉等同纯色）"""
     p = palette
     return {
-        # 顶部渐变 Header（品牌感，两模式共用靛蓝渐变）
+        # 顶部 Header（纯色化：主色平铺）
         'GRADIENT_HEADER': ft.LinearGradient(
-            colors=["#4F46E5", "#7C3AED", "#6366F1"],
+            colors=[p['PRIMARY'], p['PRIMARY']],
             begin=ft.Alignment(-1, 0),
             end=ft.Alignment(1, 0),
         ),
-        # 主色渐变（学习页/按钮/强调）
+        # 主色渐变（纯色化）
         'GRADIENT_PRIMARY': ft.LinearGradient(
-            colors=[p['PRIMARY_DARK'], p['PRIMARY']],
+            colors=[p['PRIMARY'], p['PRIMARY']],
             begin=ft.Alignment(-1, 0),
             end=ft.Alignment(1, 0),
         ),
-        # 复习页渐变（统一主色系，略提亮区分）
+        # 复习页渐变（纯色化）
         'GRADIENT_REVIEW': ft.LinearGradient(
-            colors=[p['PRIMARY'], p['PRIMARY_LIGHT']],
+            colors=[p['PRIMARY'], p['PRIMARY']],
             begin=ft.Alignment(-1, 0),
             end=ft.Alignment(1, 0),
         ),
@@ -235,18 +235,20 @@ RADIUS_FULL = 999
 # 阴影 Shadows（两模式共用中性阴影）
 # ============================================================
 SHADOW_SM = ft.BoxShadow(
-    blur_radius=4, color=ft.Colors.BLACK12, offset=ft.Offset(0, 1),
+    blur_radius=6, color=ft.Colors.with_opacity(0.04, "#000000"),
+    offset=ft.Offset(0, 1),
 )
 SHADOW_MD = ft.BoxShadow(
-    blur_radius=8, color=ft.Colors.BLACK12, offset=ft.Offset(0, 2),
+    blur_radius=10, color=ft.Colors.with_opacity(0.06, "#000000"),
+    offset=ft.Offset(0, 2),
 )
 SHADOW_LG = ft.BoxShadow(
-    blur_radius=20, color=ft.Colors.with_opacity(0.10, "#000000"),
-    offset=ft.Offset(0, 8),
+    blur_radius=18, color=ft.Colors.with_opacity(0.08, "#000000"),
+    offset=ft.Offset(0, 4),
 )
 SHADOW_CARD = ft.BoxShadow(
-    blur_radius=12, color=ft.Colors.with_opacity(0.06, "#000000"),
-    offset=ft.Offset(0, 4),
+    blur_radius=14, color=ft.Colors.with_opacity(0.05, "#000000"),
+    offset=ft.Offset(0, 3),
 )
 SHADOW_ELEVATED = SHADOW_LG
 

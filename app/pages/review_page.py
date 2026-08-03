@@ -47,42 +47,26 @@ class ReviewPage:
         # 持久控件刷新当前色板（模式切换后重新取色）
         self.progress_text.color = TEXT_SECONDARY
 
-        # === Enhanced Header (Sky-themed) ===
+        # === 简洁页头（极简：大标题 + 进度胶囊） ===
         header = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    # Icon with gradient background + subtle shadow
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.AUTO_STORIES, color=ft.Colors.WHITE, size=20),
-                        padding=ft.Padding(10, 10, 10, 10),
-                        gradient=GRADIENT_REVIEW,
-                        border_radius=RADIUS_MD,
-                        shadow=ft.BoxShadow(
-                            blur_radius=8, color=ft.Colors.with_opacity(0.25, SECONDARY),
-                            offset=ft.Offset(0, 2),
-                        ),
-                    ),
-                    ft.Container(width=10),
                     ft.Column([
-                        ft.Text("复习单词", size=FONT_LG, weight=ft.FontWeight.BOLD,
-                                color=TEXT_PRIMARY),
+                        ft.Text("复习单词", size=FONT_XXL,
+                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                         self.progress_text,
                     ], spacing=2, expand=True),
-                    # Progress badge with gradient background
+                    # 进度数字胶囊（纯色淡底）
                     ft.Container(
                         content=self.badge_text,
-                        padding=ft.Padding(14, 6, 14, 6),
-                        gradient=GRADIENT_REVIEW,
+                        padding=ft.Padding(12, 5, 12, 5),
+                        bgcolor=PRIMARY_CONTAINER,
                         border_radius=RADIUS_FULL,
-                        shadow=ft.BoxShadow(
-                            blur_radius=6, color=ft.Colors.with_opacity(0.20, SECONDARY),
-                            offset=ft.Offset(0, 2),
-                        ),
                     ),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ], spacing=0),
             padding=ft.Padding(left=PAGE_PADDING, top=SPACING_LG,
-                               right=PAGE_PADDING, bottom=SPACING_SM),
+                               right=PAGE_PADDING, bottom=SPACING_MD),
         )
 
         # Action buttons with enhanced styling
@@ -115,27 +99,28 @@ class ReviewPage:
             header,
             ft.Container(content=self.card_container, expand=True),
             self.action_buttons,
-        ], spacing=0, tight=True)
+        ], spacing=0, tight=True, expand=True)
 
     def _build_action_buttons(self):
-        """操作按钮区域 — 三档熟悉程度（增强视觉风格）"""
-        def _make_button(icon, text, bg_color, tooltip_text, result_level):
+        """操作按钮区域 — 三档熟悉程度（极简：白卡细边框+彩色图标）"""
+        def _make_button(icon, text, color, tooltip_text, result_level):
             return ft.Container(
                 content=ft.Column([
-                    ft.Container(
-                        content=ft.Icon(icon, color=ft.Colors.WHITE, size=18),
-                        padding=ft.Padding(0, 2, 0, 0),
-                    ),
-                    ft.Text(text, color=ft.Colors.WHITE, size=11,
+                    ft.Icon(icon, color=color, size=20),
+                    ft.Container(height=3),
+                    ft.Text(text, color=TEXT_PRIMARY, size=12,
                             weight=ft.FontWeight.W_600),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
-                padding=ft.Padding(20, 12, 20, 12),
-                bgcolor=bg_color,
-                border_radius=RADIUS_FULL,
-                shadow=ft.BoxShadow(
-                    blur_radius=8, color=ft.Colors.with_opacity(0.25, bg_color),
-                    offset=ft.Offset(0, 3),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                padding=ft.Padding(14, 12, 14, 12),
+                bgcolor=SURFACE,
+                border=ft.Border(
+                    left=ft.BorderSide(1.2, BORDER),
+                    right=ft.BorderSide(1.2, BORDER),
+                    top=ft.BorderSide(1.2, BORDER),
+                    bottom=ft.BorderSide(1.2, BORDER),
                 ),
+                border_radius=RADIUS_MD,
+                shadow=SHADOW_SM,
                 expand=True,
                 tooltip=tooltip_text,
                 on_click=lambda e: self._handle_result(result_level),
@@ -145,13 +130,13 @@ class ReviewPage:
         self.action_buttons = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    # 熟悉 — Emerald
+                    # 熟悉 — 绿
                     _make_button(ft.Icons.STAR, "熟悉",
                                  SUCCESS, "近期不再复习", 'familiar'),
-                    # 模糊 — Sky
+                    # 模糊 — 主色
                     _make_button(ft.Icons.AUTO_AWESOME, "模糊",
-                                 SECONDARY, "正常艾宾浩斯复习", 'vague'),
-                    # 不记得 — Red
+                                 PRIMARY, "正常艾宾浩斯复习", 'vague'),
+                    # 不记得 — 红
                     _make_button(ft.Icons.REPLAY, "不记得",
                                  ERROR, "今天多练几次", 'forget'),
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
