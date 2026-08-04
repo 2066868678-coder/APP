@@ -728,7 +728,9 @@ class ReviewPage:
         return self.words[self.word_index]
 
     def _update_progress(self, initial=False):
-        remaining = max(0, self.review_total - self.review_done)
+        # 剩余 = 队列中还没处理的词（含插回的重复词），不能用 review_done——
+        # 刷新后队列已过滤掉当天完成的词，review_done 是历史累计值会导致显示 0
+        remaining = max(0, (len(self.words) - self.word_index) + len(self.remaining_queue))
         self.progress_text.value = f"剩余 {remaining} 个"
         self.badge_text.value = f"{remaining}"
         if not initial:
