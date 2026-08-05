@@ -36,7 +36,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    VERSION = "2.4.1"
+    VERSION = "2.4.2"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -158,6 +158,8 @@ class WordBreakthroughApp:
         VERSION = self.VERSION
         VERSION_DATE = "2026-08-06"
         CHANGES = (
+            "【2.4.2】2026-08-06\n"
+            "  - 修复：修改每日学习目标后立即生效（同步今日计划，无需等第二天）\n"
             "【2.4.1】2026-08-06\n"
             "  - 全面适配手机使用（手机为主要运行平台）\n"
             "  - 统计页单词列表弹窗适配手机屏幕宽度\n"

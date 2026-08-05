@@ -48,6 +48,31 @@ def get_setting(key, default=None):
     finally:
         s.close()
 
+
+def _sync_plan_new_target():
+    """每日目标变更后同步今日计划：new_words_target 跟随设置；
+    当天还未学习时清空已锁定词表，下次加载按新目标重新锁词"""
+    try:
+        s = _get_session()
+        today = date.today()
+        plan = s.query(DailyPlan).filter(DailyPlan.plan_date == today).first()
+        if not plan:
+            return
+        saved = get_setting('daily_new_words_target', '20')
+        try:
+            target = int(saved)
+        except ValueError:
+            target = 20
+        if plan.new_words_target != target:
+            plan.new_words_target = target
+            if not (plan.new_words_done or 0):
+                plan.word_ids_new = ''
+            s.commit()
+    except Exception:
+        pass
+    finally:
+        s.close()
+
 def set_setting(key, value):
     s = _get_session()
     try:
@@ -59,6 +84,9 @@ def set_setting(key, value):
             setting = SystemSettings(key=key, value=str(value))
             s.add(setting)
         s.commit()
+        # 每日目标变更：立即同步今日计划，保证学习页立即生效
+        if key == 'daily_new_words_target':
+            _sync_plan_new_target()
         return True
     except:
         s.rollback()
@@ -109,15 +137,25 @@ def record_study(word_id, study_type, result):
                 elif study_type == 'review':
                     plan.review_done = (plan.review_done or 0) + 1
             else:
+                saved_target = get_setting('daily_new_words_target', '20')
+                try:
+                    t = int(saved_target)
+                except ValueError:
+                    t = 20
                 plan = DailyPlan(
                     plan_date=today,
-                    new_words_target=20,
+                    new_words_target=t,
                     new_words_done=1 if study_type == 'new' else 0,
                     review_done=1 if study_type == 'review' else 0,
                 )
                 s.add(plan)
         elif not plan:
-            plan = DailyPlan(plan_date=today, new_words_target=20)
+            saved_target = get_setting('daily_new_words_target', '20')
+            try:
+                t = int(saved_target)
+            except ValueError:
+                t = 20
+            plan = DailyPlan(plan_date=today, new_words_target=t)
             s.add(plan)
 
         s.commit()
@@ -133,6 +171,7 @@ def record_study(word_id, study_type, result):
 
 def get_today_plan():
     """获取今日计划"""
+    _sync_plan_new_target()
     s = _get_session()
     try:
         today = date.today()
@@ -173,6 +212,7 @@ def get_today_plan():
 
 def get_today_words():
     """获取今日要学的单词（新词+复习），锁定当日单词列表"""
+    _sync_plan_new_target()
     s = _get_session()
     try:
         today = date.today()
@@ -442,6 +482,7 @@ def get_recent_study_words(days: int):
 
 def get_home_data():
     """首页数据：今日计划 + 统计，1次DB会话"""
+    _sync_plan_new_target()
     s = _get_session()
     try:
         today = date.today()
@@ -504,6 +545,7 @@ def get_home_data():
 
 def get_study_data():
     """学习页面数据：新词列表 + 今日计划 + 统计 + 目标，1次DB会话"""
+    _sync_plan_new_target()
     s = _get_session()
     try:
         today = date.today()
