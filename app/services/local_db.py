@@ -224,9 +224,12 @@ def get_today_words():
         if plan and plan.word_ids_new:
             ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
             all_nw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
-            # 过滤已学的（跨设备同步：另一台设备已学的词不再显示）
+            # 过滤已学过的：只过滤标"熟悉/模糊"(remember)的词；
+            # "不记得"(forget)的词保留在今日队列，直到标熟悉为止（当天反复出现）
             studied_ids_set = set(r[0] for r in s.query(StudyRecord.word_id).filter(
-                StudyRecord.word_id.in_(ids)).distinct().all())
+                StudyRecord.word_id.in_(ids),
+                StudyRecord.result == 'remember',
+            ).distinct().all())
             new_words = [w for w in all_nw if w.id not in studied_ids_set]
 
         if plan and plan.word_ids_review:
@@ -250,7 +253,9 @@ def get_today_words():
                        and plan.new_words_done >= plan.new_words_target)
             available = []
             if not done_ok:
-                studied = s.query(StudyRecord.word_id).distinct().all()
+                # 只排除标"熟悉/模糊"(remember)的词，"不记得"(forget)的词继续补入
+                studied = s.query(StudyRecord.word_id).filter(
+                    StudyRecord.result == 'remember').distinct().all()
                 studied_ids = [r[0] for r in studied]
                 q = s.query(Word)
                 if studied_ids:
@@ -592,13 +597,18 @@ def get_study_data():
         if plan.word_ids_new:
             ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
             all_nw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
+            # 只过滤标"熟悉/模糊"(remember)的词；"不记得"(forget)的词保留到标熟悉为止
             studied_ids_set = set(r[0] for r in s.query(StudyRecord.word_id).filter(
-                StudyRecord.word_id.in_(ids)).distinct().all())
+                StudyRecord.word_id.in_(ids),
+                StudyRecord.result == 'remember',
+            ).distinct().all())
             new_words = [w for w in all_nw if w.id not in studied_ids_set]
 
         # 未锁定则锁定（仅在今日计划未完成时）
         if not new_words and plan.new_words_done < plan.new_words_target:
-            studied = s.query(StudyRecord.word_id).distinct().all()
+            # 只排除标"熟悉/模糊"(remember)的词，"不记得"(forget)的词继续补入今日队列
+            studied = s.query(StudyRecord.word_id).filter(
+                StudyRecord.result == 'remember').distinct().all()
             studied_ids = [r[0] for r in studied]
             q = s.query(Word)
             if studied_ids:

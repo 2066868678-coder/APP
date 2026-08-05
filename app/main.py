@@ -36,7 +36,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    VERSION = "2.4.2"
+    VERSION = "2.4.3"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -158,6 +158,9 @@ class WordBreakthroughApp:
         VERSION = self.VERSION
         VERSION_DATE = "2026-08-06"
         CHANGES = (
+            "【2.4.3】2026-08-06\n"
+            "  - 修复：「模糊/不记得」的词当天反复出现（刷新/切页后仍保留在今日队列）\n"
+            "  - 修复：学完今日目标立即显示完成并停止，无需刷新\n"
             "【2.4.2】2026-08-06\n"
             "  - 修复：修改每日学习目标后立即生效（同步今日计划，无需等第二天）\n"
             "【2.4.1】2026-08-06\n"

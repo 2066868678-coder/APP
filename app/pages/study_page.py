@@ -709,6 +709,10 @@ class StudyPage:
             self.app.show_snackbar("💪 不记得！等会再出现，多看几次", ERROR)
 
     def _next_word(self):
+        # 达到今日目标 → 立即显示完成并停止（不再继续学锁定队列中多余词）
+        if self.new_words_done >= self._fresh_target:
+            self._show_completion()
+            return
         self.word_index += 1
         # 穿插再现：每学 REPEAT_GAP 个词，把之前"模糊/不记得"的词插回队列，
         # 直到用户点"熟悉"才放过（当天反复出现）
