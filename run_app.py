@@ -46,6 +46,34 @@ try:
 
     if word_count > 0 and not need_reimport:
         print(f"数据库已有 {word_count} 个单词")
+        # 数据版本升级：记忆方法已按原书全部重排（2026-08-06）
+        # 原地更新 memory_methods，不删除学习记录/每日计划
+        DATA_VERSION = '2026-08-06-mm-v3'
+        from backend.models import SystemSettings
+        ver = session.query(SystemSettings).filter_by(key='data_version').first()
+        if not ver or ver.value != DATA_VERSION:
+            json_path = os.path.join(ROOT, 'database', 'words_seed.json')
+            if os.path.exists(json_path):
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    words_data = json.load(f)
+                updated = 0
+                for item in words_data:
+                    w = item.get('word', '').strip()
+                    mm = item.get('memory_methods', '')
+                    if not w or not mm:
+                        continue
+                    row = session.query(Word).filter_by(word=w).first()
+                    if row and row.memory_methods != mm:
+                        row.memory_methods = mm
+                        updated += 1
+                if ver:
+                    ver.value = DATA_VERSION
+                else:
+                    session.add(SystemSettings(key='data_version', value=DATA_VERSION))
+                session.commit()
+                print(f"已原地更新 {updated} 词的记忆方法（学习记录保留）")
+            else:
+                print("警告: words_seed.json 不存在，跳过数据更新")
     else:
         if need_reimport:
             # 清空旧数据（包括学习记录和每日计划）

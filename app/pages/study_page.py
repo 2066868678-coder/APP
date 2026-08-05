@@ -65,7 +65,10 @@ class StudyPage:
         self._fresh_target = cur_target  # 供 _update_progress 使用，避免重复查询
         if remain > 0:
             est_days = (remain + cur_target - 1) // cur_target
-            self.est_text.value = f"剩余{remain}词 · 每日{cur_target}词还需{est_days}天"
+            from datetime import date, timedelta
+            finish_date = date.today() + timedelta(days=est_days)
+            self.est_text.value = (f"剩余{remain}词 · 每日{cur_target}词还需{est_days}天 · "
+                                   f"预计 {finish_date.month}月{finish_date.day}日背完")
         else:
             self.est_text.value = "所有单词已学完！ 🎉"
 
@@ -296,7 +299,11 @@ class StudyPage:
                     self.app.pronounce_link(wd['word'], size=26),
                     ft.Container(expand=True),
                 ], alignment=ft.MainAxisAlignment.CENTER),
-                ft.Container(height=30),
+                ft.Container(height=6),
+                # 原书页码（方便对照原书查阅）
+                ft.Text(f"原书 P{wd.get('source_page', '')}", size=11,
+                        color=TEXT_HINT, text_align=ft.TextAlign.CENTER),
+                ft.Container(height=24),
                 # "tap to flip" hint — more subtle and elegant
                 ft.Container(
                     content=ft.Row([

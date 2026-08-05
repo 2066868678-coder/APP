@@ -297,6 +297,11 @@ class ReviewPage:
                     self.app.pronounce_link(wd['word'], size=26),
                     ft.Container(expand=True),
                 ], alignment=ft.MainAxisAlignment.CENTER),
+                ft.Container(height=6),
+                # 原书页码（方便对照原书查阅）
+                ft.Text(f"原书 P{wd.get('source_page', '')}", size=11,
+                        color=TEXT_HINT, text_align=ft.TextAlign.CENTER),
+                ft.Container(height=16),
                 # Collocations preview (keep original feature)
                 *([
                     ft.Container(height=16),
