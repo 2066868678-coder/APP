@@ -22,6 +22,7 @@ database/*.bak_*
 /_pdf_extracted*.json
 /_mm_*.txt
 /_to_fix*.json
+/_test_*.py
 
 # OCR output & scripts
 ocr/output/*

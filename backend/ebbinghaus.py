@@ -23,13 +23,14 @@ from typing import List, Optional, Dict, Any
 STANDARD_INTERVALS = [1, 2, 4, 7, 15, 30]
 
 
-def get_next_review_interval(current_interval: int, remembered: bool) -> int:
+def get_next_review_interval(current_interval: int, remembered: bool, weak_streak: int = 0) -> int:
     """
     根据记忆结果计算下次复习间隔
 
     参数:
         current_interval: 当前复习间隔（天）
         remembered: 是否记得（True=记得, False=忘记）
+        weak_streak: 最近连续"不记得"的次数（>=2 视为记不牢的薄弱词）
 
     返回:
         下次复习间隔（天）
@@ -37,6 +38,11 @@ def get_next_review_interval(current_interval: int, remembered: bool) -> int:
     if not remembered:
         # 忘记了 → 重置为1天
         return 1
+
+    if weak_streak >= 2:
+        # 经常记不牢的词：即使这次记住了，也保持短间隔（2天）继续巩固，
+        # 直到连续记住 2 次以上（weak_streak 归零）才恢复正常递进
+        return min(max(current_interval, 1), 2)
 
     # 记得 → 按照标准间隔推进
     for i, interval in enumerate(STANDARD_INTERVALS):

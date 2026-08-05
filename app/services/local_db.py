@@ -107,7 +107,17 @@ def record_study(word_id, study_type, result):
         ).order_by(StudyRecord.id.desc()).first()
         cur_interval = last.review_interval if last else 0
         remembered = (result == 'remember')
-        next_interval = get_next_review_interval(cur_interval, remembered)
+        # 连续"不记得"次数（从最近记录往前数）：经常记不牢的词要多复习
+        weak_streak = 0
+        recent = s.query(StudyRecord).filter(
+            StudyRecord.word_id == word_id
+        ).order_by(StudyRecord.id.desc()).limit(10).all()
+        for r in recent:
+            if r.result == 'forget':
+                weak_streak += 1
+            else:
+                break
+        next_interval = get_next_review_interval(cur_interval, remembered, weak_streak)
 
         record = StudyRecord(
             word_id=word_id, study_type=study_type,
