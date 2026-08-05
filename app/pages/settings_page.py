@@ -472,47 +472,6 @@ class SettingsPage:
             ft.Container(height=CARD_GAP),
 
             # ================================================================
-            # 启动帮助
-            # ================================================================
-            AppCard(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.PLAY_CIRCLE_OUTLINE,
-                                            color=SECONDARY, size=18),
-                            padding=ft.Padding(6, 6, 6, 6),
-                            bgcolor=ft.Colors.with_opacity(0.10, SECONDARY),
-                            border_radius=8,
-                        ),
-                        ft.Container(width=8),
-                        ft.Text("\u4e0b\u6b21\u5982\u4f55\u6253\u5f00", size=FONT_LG,
-                                weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                    ]),
-                    ft.Divider(height=1, color=BORDER),
-                    ft.Container(height=8),
-                    ft.Text("\u53cc\u51fb start.bat \u6216\u5728\u7ec8\u7aef\u8fd0\u884c\uff1a",
-                            size=FONT_SM, color=TEXT_SECONDARY),
-                    ft.Container(height=4),
-                    ft.Container(
-                        content=ft.Text(
-                            "cd E:\\APP\npython run_app.py",
-                            size=13, color="#34D399", font_family="monospace",
-                            weight=W_MEDIUM,
-                        ),
-                        padding=ft.Padding(left=16, top=12, right=16, bottom=12),
-                        bgcolor="#1E293B",
-                        border_radius=RADIUS_SM,
-                    ),
-                    ft.Container(height=8),
-                    ft.Text("\u6d4f\u89c8\u5668\u6253\u5f00 http://localhost:8551",
-                            size=FONT_SM, color=TEXT_SECONDARY),
-                ], spacing=0),
-                elevation="sm",
-            ),
-
-            ft.Container(height=CARD_GAP),
-
-            # ================================================================
             # 关于
             # ================================================================
             AppCard(

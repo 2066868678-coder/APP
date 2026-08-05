@@ -36,7 +36,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    VERSION = "2.3.0"
+    VERSION = "2.4.0"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -158,6 +158,8 @@ class WordBreakthroughApp:
         VERSION = self.VERSION
         VERSION_DATE = "2026-08-06"
         CHANGES = (
+            "【2.4.0】2026-08-06\n"
+            "  - 设置页移除「下次如何打开」开发说明（start.bat/终端命令/localhost）\n"
             "【2.3.0】2026-08-06\n"
             "  - 记忆方法全库修复：按原书重排2281词\n"
             "  - 清除全部截断/串词/乱码（微博链接、符号、侧边栏渗漏）\n"
