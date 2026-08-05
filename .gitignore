@@ -14,6 +14,14 @@ build/
 
 # Database (regenerated from PDF)
 database/*.db
+database/*.bak_*
+
+# 一次性修复脚本/提取产物（禁止再提交，防止旧垃圾数据混入）
+/_fix_*.py
+/_extract_*.py
+/_pdf_extracted*.json
+/_mm_*.txt
+/_to_fix*.json
 
 # OCR output & scripts
 ocr/output/*
