@@ -204,7 +204,7 @@ class SettingsPage:
         # 关于信息
         about_items = [
             ("\u5e94\u7528", "\u5355\u8bcd\u7a81\u56f4 (\u72ec\u7acb\u7248)"),
-            ("\u7248\u672c", "2.1.0"),
+            ("\u7248\u672c", self.app.VERSION),
             ("\u6570\u636e\u6765\u6e90", "\u300a\u5355\u8bcd\u7a81\u56f45200\u300b\u4e0a\u518c"),
             ("\u590d\u4e60\u7b97\u6cd5", "\u827e\u5bbe\u6d69\u65af\u9057\u5fd8\u66f2\u7ebf"),
             ("\u5355\u8bcd\u603b\u6570", "2281 \u4e2a"),

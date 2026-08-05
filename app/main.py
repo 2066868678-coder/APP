@@ -36,7 +36,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    VERSION = "2.2.0"
+    VERSION = "2.3.0"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -155,7 +155,7 @@ class WordBreakthroughApp:
             self.page.update()
 
     def show_about(self, e):
-        VERSION = "2.3.0"
+        VERSION = self.VERSION
         VERSION_DATE = "2026-08-06"
         CHANGES = (
             "【2.3.0】2026-08-06\n"
