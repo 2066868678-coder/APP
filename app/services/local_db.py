@@ -49,6 +49,16 @@ def get_setting(key, default=None):
         s.close()
 
 
+def _parse_ids(s):
+    """安全解析逗号分隔的单词ID串（忽略非法字符，防崩溃）"""
+    out = []
+    for x in (s or '').split(','):
+        x = x.strip()
+        if x.isdigit():
+            out.append(int(x))
+    return out
+
+
 def _sync_plan_new_target():
     """每日目标变更后同步今日计划：new_words_target 跟随设置；
     当天还未学习时清空已锁定词表，下次加载按新目标重新锁词"""
@@ -60,7 +70,7 @@ def _sync_plan_new_target():
             return
         saved = get_setting('daily_new_words_target', '20')
         try:
-            target = int(saved)
+            target = max(1, int(saved))
         except ValueError:
             target = 20
         if plan.new_words_target != target:
@@ -232,7 +242,7 @@ def get_today_words():
         review_words = []
 
         if plan and plan.word_ids_new:
-            ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
+            ids = _parse_ids(plan.word_ids_new)
             all_nw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
             # 过滤已学过的：只过滤标"熟悉/模糊"(remember)的词；
             # "不记得"(forget)的词保留在今日队列，直到标熟悉为止（当天反复出现）
@@ -243,7 +253,7 @@ def get_today_words():
             new_words = [w for w in all_nw if w.id not in studied_ids_set]
 
         if plan and plan.word_ids_review:
-            ids = [int(x) for x in plan.word_ids_review.split(',') if x.strip()]
+            ids = _parse_ids(plan.word_ids_review)
             all_rw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
             # 过滤今天已经复习过的词（点了熟悉/模糊就不再现，不记得的还要再来）
             from datetime import datetime as dt
@@ -273,7 +283,7 @@ def get_today_words():
 
                 saved_target = get_setting('daily_new_words_target', '20')
                 try:
-                    limit_n = int(saved_target)
+                    limit_n = max(1, int(saved_target))
                 except ValueError:
                     limit_n = 10
 
@@ -605,7 +615,7 @@ def get_study_data():
         # 今日新词
         new_words = []
         if plan.word_ids_new:
-            ids = [int(x) for x in plan.word_ids_new.split(',') if x.strip()]
+            ids = _parse_ids(plan.word_ids_new)
             all_nw = s.query(Word).filter(Word.id.in_(ids)).order_by(Word.id).all() if ids else []
             # 只过滤标"熟悉/模糊"(remember)的词；"不记得"(forget)的词保留到标熟悉为止
             studied_ids_set = set(r[0] for r in s.query(StudyRecord.word_id).filter(
@@ -625,7 +635,7 @@ def get_study_data():
                 q = q.filter(~Word.id.in_(studied_ids))
             saved_target = get_setting('daily_new_words_target', '20')
             try:
-                limit_n = int(saved_target)
+                limit_n = max(1, int(saved_target))
             except ValueError:
                 limit_n = 10
             available = q.order_by(Word.source_book, Word.chapter, Word.source_page, Word.id).limit(limit_n).all()

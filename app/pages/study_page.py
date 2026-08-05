@@ -42,6 +42,7 @@ class StudyPage:
         self.flipped = False
         self._counted_ids = set()  # 当天已计数的词ID（防重复）
         self._since_repeat = 0     # 距上次穿插不熟词学过的词数
+        self._weak_ids = set()     # 今天"模糊/不记得"过的词（直到标"熟悉"才移除）
         self.REPEAT_GAP = 5        # 每学5个词穿插一个"模糊/不记得"的词
 
         self.progress_text = ft.Text("加载中...", size=14, color=TEXT_SECONDARY)
@@ -131,6 +132,7 @@ class StudyPage:
                 self.remaining_queue = []
                 self._counted_ids = set()
                 self._since_repeat = 0
+                self._weak_ids = set()
             self.total_new = target
             self.new_words_done = done
             # 先建按钮（_show_current_word 中会引用）
@@ -686,6 +688,7 @@ class StudyPage:
             if word_id not in self._counted_ids:
                 self.new_words_done += 1
                 self._counted_ids.add(word_id)
+            self._weak_ids.discard(word_id)  # 标熟悉 → 不再是薄弱词
             self._next_word()
             self.app.show_snackbar("⭐ 已标记为熟悉，3-4天后安排复习")
 
@@ -695,6 +698,7 @@ class StudyPage:
             if word_id not in self._counted_ids:
                 self.new_words_done += 1
                 self._counted_ids.add(word_id)
+            self._weak_ids.add(word_id)
             if word_id not in self.remaining_queue:
                 self.remaining_queue.append(word_id)
             self._next_word()
@@ -703,16 +707,13 @@ class StudyPage:
         else:  # forget
             # 不记得 → 重置间隔 + 今日多次出现
             api_service.record_study(word_id, 'new', 'forget')
+            self._weak_ids.add(word_id)
             if word_id not in self.remaining_queue:
                 self.remaining_queue.append(word_id)
             self._next_word()
             self.app.show_snackbar("💪 不记得！等会再出现，多看几次", ERROR)
 
     def _next_word(self):
-        # 达到今日目标 → 立即显示完成并停止（不再继续学锁定队列中多余词）
-        if self.new_words_done >= self._fresh_target:
-            self._show_completion()
-            return
         self.word_index += 1
         # 穿插再现：每学 REPEAT_GAP 个词，把之前"模糊/不记得"的词插回队列，
         # 直到用户点"熟悉"才放过（当天反复出现）
@@ -725,12 +726,18 @@ class StudyPage:
                     self.words.insert(self.word_index, wd)
             else:
                 self._since_repeat += 1
+        # 队列走完但还有薄弱词待复习 → 重排到尾部继续复习（不直接完成）
         if self.word_index >= len(self.words) and self.remaining_queue:
             self._reshuffle()
+        # 队列真正走完 → 完成
         if self.word_index >= len(self.words):
             self._show_completion()
-        else:
-            self._show_current_word()
+            return
+        # 目标已达成且没有任何薄弱词待复习 → 立即完成（不再学多余锁定词）
+        if self.new_words_done >= self._fresh_target and not self._weak_ids:
+            self._show_completion()
+            return
+        self._show_current_word()
 
     def _reshuffle(self):
         forgot = list(set(self.remaining_queue))

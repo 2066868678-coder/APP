@@ -36,7 +36,7 @@ class WordBreakthroughApp:
     """单词突围 - 主应用"""
 
     APP_NAME = "单词突围"
-    VERSION = "2.4.4"
+    VERSION = "2.4.5"
 
     def __init__(self, page: ft.Page):
         self.page = page
@@ -158,6 +158,10 @@ class WordBreakthroughApp:
         VERSION = self.VERSION
         VERSION_DATE = "2026-08-06"
         CHANGES = (
+            "【2.4.5】2026-08-06\n"
+            "  - 穿插复习边界修复：学不满5个/尾部词标不记得也会反复出现，直到标「熟悉」\n"
+            "  - 目标达成后薄弱词继续复习，全部标熟悉才显示完成\n"
+            "  - 稳健性加固：非法数据（坏ID/空锁定/目标0/超大目标）不再崩溃\n"
             "【2.4.4】2026-08-06\n"
             "  - 新增：经常点「不记得」的词自动加密艾宾浩斯复习（保持1-2天高频，连续记住后恢复正常）\n"
             "  - 学习/复习页穿插复习均支持当天反复出现（刷新后保留）\n"

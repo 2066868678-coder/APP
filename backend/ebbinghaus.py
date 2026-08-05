@@ -110,12 +110,15 @@ def should_review_today(
     if not last_study_str:
         return False
 
-    # 解析日期
-    if isinstance(last_study_str, str):
-        last_date = datetime.fromisoformat(last_study_str).date()
-    elif isinstance(last_study_str, datetime):
-        last_date = last_study_str.date()
-    else:
+    # 解析日期（损坏/异常格式直接跳过，防止崩溃）
+    try:
+        if isinstance(last_study_str, str):
+            last_date = datetime.fromisoformat(last_study_str).date()
+        elif isinstance(last_study_str, datetime):
+            last_date = last_study_str.date()
+        else:
+            return False
+    except (ValueError, TypeError):
         return False
 
     # 获取当前复习间隔
