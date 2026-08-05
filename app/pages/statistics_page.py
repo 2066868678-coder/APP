@@ -456,7 +456,7 @@ class StatisticsPage:
             title=ft.Text(f'总单词列表 ({len(words)}词)'),
             content=ft.Container(
                 content=ft.Column(segments, scroll=ft.ScrollMode.AUTO),
-                width=380, height=500,
+                width=330, height=420,
             ),
             actions=[ft.TextButton('关闭',
                       on_click=lambda e: self._close_dlg(dlg))],

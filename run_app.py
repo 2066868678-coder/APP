@@ -4,12 +4,12 @@
 单词突围 - 启动脚本
 ==================
 用法：
-  python run_app.py            # Web模式（浏览器可看）
-  python run_app.py --desktop  # 桌面窗口模式
+  python run_app.py            # Web模式（手机/电脑浏览器均可访问）
+  python run_app.py --desktop  # 桌面窗口模式（备用）
 
-Web模式下：
-  电脑浏览器: http://localhost:8550
-  手机(同WiFi): http://192.168.3.59:8550
+Web模式下（主要使用方式为手机浏览器）：
+  手机(同WiFi): http://192.168.3.59:8551
+  电脑浏览器:   http://localhost:8551
 """
 
 import sys, os, argparse, json
